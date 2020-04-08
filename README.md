@@ -1,2 +1,2 @@
-# mandown
- man-page inspired Markdown viewer
+# Mandown
+ A man-page inspired Markdown viewer
