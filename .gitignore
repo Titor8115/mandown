@@ -1,1 +1,6 @@
 .vscode/
+src/*.o
+cli/*.o
+blender/*.o
+mandown
+test.*

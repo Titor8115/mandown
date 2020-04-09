@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2008, Natacha Porté
  * Copyright (c) 2011, Vicent Martí
+ * Copyright (c) 2019, Tianze Han
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -88,6 +89,7 @@ bufnew(size_t unit)
 		ret->data = 0;
 		ret->size = ret->asize = 0;
 		ret->unit = unit;
+		ret->nline = 0;
 	}
 	return ret;
 }
@@ -182,6 +184,9 @@ bufputc(struct buf *buf, int c)
 
 	buf->data[buf->size] = c;
 	buf->size += 1;
+	if (c == 10) {
+		buf->nline += 1;
+	}
 }
 
 /* bufrelease: decrease the reference count and free the buffer if needed */
@@ -223,3 +228,7 @@ bufslurp(struct buf *buf, size_t len)
 	memmove(buf->data, buf->data + len, buf->size);
 }
 
+void bufline(struct buf *buf, int lc)
+{
+	buf->nline += lc;
+}

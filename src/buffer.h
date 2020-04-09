@@ -1,7 +1,8 @@
 /*
  * Copyright (c) 2008, Natacha Porté
  * Copyright (c) 2011, Vicent Martí
- *
+ * Copyright (c) 2019, Tianze Han
+ * 
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
@@ -42,6 +43,7 @@ struct buf {
 	size_t size;	/* size of the string */
 	size_t asize;	/* allocated size (0 = volatile buffer) */
 	size_t unit;	/* reallocation unit size (0 = read-only buffer) */
+	int nline;
 };
 
 /* CONST_BUF: global buffer from a string litteral */
@@ -88,6 +90,8 @@ void bufslurp(struct buf *, size_t);
 
 /* bufprintf: formatted printing to a buffer */
 void bufprintf(struct buf *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
+
+void bufline(struct buf *, int);
 
 #ifdef __cplusplus
 }
