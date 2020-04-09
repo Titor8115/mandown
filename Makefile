@@ -27,7 +27,7 @@ DEPDIR=depends
 #MFLAGS=-fPIC
 
 CFLAGS=-c -g -O3 -fPIC -Wall -Werror -Wsign-compare -Isrc -Iblender
-LDFLAGS=-g -O3 -Wall -Werror 
+LDFLAGS=-g -O3 -Wall -Werror
 CC=gcc
 
 
@@ -76,8 +76,13 @@ include $(wildcard $(DEPDIR)/*.d)
 
 # generic object compilations
 
-%.o:	src/%.c cli/%.c blender/%.c
+%.o:	src/%.c blender/%.c
 	@mkdir -p $(DEPDIR)
 	@$(CC) -MM $< > $(DEPDIR)/$*.d
 	$(CC) $(CFLAGS) -o $@ $<
+
+cli.o:	cli/%.c 
+	@mkdir -p $(DEPDIR)
+	@$(CC) -MM $< > $(DEPDIR)/$*.d
+	$(CC) $(CFLAGS) -I/usr/include/ncursesw -o $@ $<
 

@@ -224,10 +224,10 @@ rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque)
 	if (options->flags & blender_TOC)
 		bufprintf(ob, "<h%d id=\"toc_%d\">", level, options->toc_data.header_count++);
 	else
-		bufprintf(ob, "<h%d>\n", level);
+		bufprintf(ob, "<h%d>", level);
 
 	if (text) bufput(ob, text->data, text->size);
-	bufprintf(ob, "</h%d>", level);
+	bufprintf(ob, "</h%d>\n", level);
 }
 
 static int

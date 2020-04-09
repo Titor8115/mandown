@@ -18,12 +18,12 @@
 #include <errno.h>
 #include <getopt.h>
 #include <locale.h>
-#include <ncursesw/curses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <ncursesw/ncurses.h>
 
 #include "buffer.h"
 #include "blender.h"
@@ -31,7 +31,7 @@
 
 #define READ_UNIT 1024
 #define OUTPUT_UNIT 64
-#define PATH_MAX 200
+#define PATH_MAX 1024
 
 static void message(int stream, const char *contents) {
   switch (stream) {
@@ -60,10 +60,10 @@ int draw_ncurses(char **file) {
   struct sd_markdown *markdown;
 
   initscr();
-  // keypad(stdscr, TRUE); /* enable arrow keys */
+  keypad(stdscr, TRUE); /* enable arrow keys */
   curs_set(0);          /* disable cursor */
-  // nocbreak();             /* make getch() process one char at a time */
-  // noecho();             /* disable output of keyboard typing */
+  cbreak();             /* make getch() process one char at a time */
+  noecho();             /* disable output of keyboard typing */
   // idlok(stdscr, TRUE);  /* allow use of insert/delete line */
 
   in = fopen(*file, "r");
@@ -110,8 +110,9 @@ int draw_ncurses(char **file) {
   sd_markdown_free(markdown);
 
   /* writing the result to stdout */
-  ret = fwrite(ob->data, 1, ob->size, stdout);
-
+  // ret = fwrite(ob->data, 1, ob->size, stdout);
+  printw("%s\n", (char*)(ob->data));
+  refresh();
   /* cleanup */
   bufrelease(ib);
   bufrelease(ob);
@@ -126,7 +127,7 @@ int main(int argc, char **argv) {
   int c;
   char *fname = NULL;
 
-  setlocale(LC_CTYPE, "");
+  setlocale(LC_ALL, "");
   /* Get current working directory */
   if (argc < 2) {
     fprintf(stderr,
