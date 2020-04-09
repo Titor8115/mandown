@@ -1,6 +1,4 @@
 .vscode/
-src/*.o
-cli/*.o
-blender/*.o
+*.o
 mandown
 test.*
