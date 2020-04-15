@@ -2,7 +2,7 @@
 
 A man-page inspired Markdown reader written in C.
 
-## What is mandown
+# What is mandown
 
 Need to lookup things from README? Or from manual page? Or perhaps just want to install something cool...
 

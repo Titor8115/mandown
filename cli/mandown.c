@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <locale.h>
+#include <ncursesw/ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +29,9 @@
 #include "blender.h"
 #include "buffer.h"
 #include "markdown.h"
+
+#define READ_UNIT 1024
+#define OUTPUT_UNIT 64
 
 void message(int stream, const char *contents) {
     switch (stream) {
@@ -119,7 +123,7 @@ void draw_ncurses(char **file) {
     sd_markdown_free(markdown);
 
     /* Render the result */
-    waddnstr(content, (char *)(ob->data), (int)(ob->size));
+    wprintw(content, (char *)(ob->data), (int)(ob->size));
     prefresh(content, 0, 0, 0, 0, ymax - 1, xmax - 1);
     wgetch(content);
     delwin(content);

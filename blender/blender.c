@@ -207,25 +207,26 @@ rndr_linebreak(struct buf *ob, void *opaque) {
 static void
 rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque) {
     struct blender_renderopt *options = opaque;
-
+    if (ob->size) bufputc(ob, '\n');
     if (options->flags & blender_TOC)
         bufprintf(ob, "<h%d id=\"toc_%d\">", level, options->toc_data.header_count++);
     else {
-        int i = 0;
-        for (i = 0; i < level - 1; i++) {
-            bufputc(ob, ' ');
-            bufputc(ob, ' ');
-            bufputc(ob, ' ');
+        if (!ob->size) {
+            bufprintf(ob, "%s(7README tmp)\n\n", (char *)text->data);
+            bufprintf(ob, "NAME\n\t");
+        } else {
+            int i = 0;
+            for (i = 0; i < level - 1; i++) {
+                bufputs(ob, "   ");
+            }
         }
-        // bufprintf(ob, "%.*c", (level - 1) * 3, ' ');
     }
     if (text) {
         bufput(ob, text->data, text->size);
     }
     bufputc(ob, '\n');
-    // bufprintf(ob, "</h%d>\n", level);
 
-} /* Syntax altered: mostly */
+} /* Syntax altered */
 
 static int
 rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const struct buf *content, void *opaque) {
@@ -259,20 +260,20 @@ rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const
 
 static void
 rndr_list(struct buf *ob, const struct buf *text, int flags, void *opaque) {
-    bufputs(ob, flags & MKD_LIST_ORDERED ? "<ol>\n" : "<ul>\n");
+    bufprintf(ob, flags & MKD_LIST_ORDERED ? "\n" : "\n");  // <ol> vs <ul>
     if (text) bufput(ob, text->data, text->size);
-    bufputs(ob, flags & MKD_LIST_ORDERED ? "</ol>\n" : "</ul>\n");
+    bufprintf(ob, flags & MKD_LIST_ORDERED ? "\n" : "\n");  // </ol> vs </ul>
 }
 
 static void
 rndr_listitem(struct buf *ob, const struct buf *text, int flags, void *opaque) {
     // BUFPUTSL(ob, "<li>\n");
-    BUFPUTSL(ob, "\t· ");
     if (text) {
         size_t size = text->size;
         while (size && text->data[size - 1] == '\n') {
             size--;
         }
+        BUFPUTSL(ob, "· ");
         bufput(ob, text->data, size);
     }
     bufputc(ob, '\n');
@@ -315,7 +316,6 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque) {
     } else {
         bufput(ob, &text->data[i], text->size - i);
     }
-    bufputc(ob, '\n');
     bufputc(ob, '\n');
 
 } /* Syntax altered */
