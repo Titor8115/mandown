@@ -43,9 +43,6 @@ $ apt-get install libncursesw5-dev
 $ brew install ncurses
 ```
 
-
-It should be running for 10 seconds and quit.
-
 ## Looking for helps
 
 ## Todo
