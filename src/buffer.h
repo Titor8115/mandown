@@ -19,9 +19,16 @@
 #ifndef BUFFER_H__
 #define BUFFER_H__
 
-#include <stddef.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdint.h>
+
+#if defined(__has_include)
+#if __has_include(<ncursesw/ncurses.h>)
+#include <ncursesw/ncurses.h>
+#define HAS_NCURSES
+#endif
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,36 +40,35 @@ extern "C" {
 #endif
 
 typedef enum {
-	BUF_OK = 0,
-	BUF_ENOMEM = -1,
+    BUF_OK = 0,
+    BUF_ENOMEM = -1,
 } buferror_t;
 
 /* struct buf: character array buffer */
 struct buf {
-	uint8_t *data;		/* actual character data */
-	size_t size;	/* size of the string */
-	size_t asize;	/* allocated size (0 = volatile buffer) */
-	size_t unit;	/* reallocation unit size (0 = read-only buffer) */
-	int nline;
+    uint8_t *data; /* actual character data */
+    size_t size;   /* size of the string */
+    size_t asize;  /* allocated size (0 = volatile buffer) */
+    size_t unit;   /* reallocation unit size (0 = read-only buffer) */
 };
 
 /* CONST_BUF: global buffer from a string litteral */
 #define BUF_STATIC(string) \
-	{ (uint8_t *)string, sizeof string -1, sizeof string, 0, 0 }
+    { (uint8_t *)string, sizeof string - 1, sizeof string, 0, 0 }
 
 /* VOLATILE_BUF: macro for creating a volatile buffer on the stack */
 #define BUF_VOLATILE(strname) \
-	{ (uint8_t *)strname, strlen(strname), 0, 0, 0 }
+    { (uint8_t *)strname, strlen(strname), 0, 0, 0 }
 
 /* BUFPUTSL: optimized bufputs of a string litteral */
 #define BUFPUTSL(output, literal) \
-	bufput(output, literal, sizeof literal - 1)
+    bufput(output, literal, sizeof literal - 1)
 
 /* bufgrow: increasing the allocated size to the given value */
 int bufgrow(struct buf *, size_t);
 
 /* bufnew: allocation of a new buffer */
-struct buf *bufnew(size_t) __attribute__ ((malloc));
+struct buf *bufnew(size_t) __attribute__((malloc));
 
 /* bufnullterm: NUL-termination of the string array (making a C-string) */
 const char *bufcstr(struct buf *);
@@ -89,9 +95,7 @@ void bufreset(struct buf *);
 void bufslurp(struct buf *, size_t);
 
 /* bufprintf: formatted printing to a buffer */
-void bufprintf(struct buf *, const char *, ...) __attribute__ ((format (printf, 2, 3)));
-
-void bufline(struct buf *, int);
+void bufprintf(struct buf *, const char *, ...) __attribute__((format(printf, 2, 3)));
 
 #ifdef __cplusplus
 }

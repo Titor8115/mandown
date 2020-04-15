@@ -27,14 +27,16 @@
 extern "C" {
 #endif
 
-#define BLK 0
-#define RED 1
-#define GRN 2
-#define YEL 3
-#define BLU 4
-#define MAG 5
-#define CYN 6
-#define WHT 7
+typedef enum {
+    BLK,
+    RED,
+    GRN,
+    YEL,
+    BLU,
+    MAG,
+    CYN,
+    WHT,
+} ansi_codes;
 
 struct blender_renderopt {
 	struct {

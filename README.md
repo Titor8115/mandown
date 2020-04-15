@@ -2,12 +2,6 @@
 
 A man-page inspired Markdown reader written in C.
 
-- [mandown](#mandown)
-  - [What is mandown](#what-is-mandown)
-  - [Install](#install)
-  - [Looking for helps](#looking-for-helps)
-  - [Todo](#todo)
-
 ## What is mandown
 
 Need to lookup things from README? Or from manual page? Or perhaps just want to install something cool...

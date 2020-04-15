@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../cli/mandown.h"
 #include "houdini.h"
 #include "markdown.h"
 
@@ -106,15 +107,13 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
         escape_blender(ob, link->data, link->size);
     }
 
-    BUFPUTSL(ob, "</a>");
+    BUFPUTSL(ob, "</a>\n");
 
     return 1;
 }
 
 static void
 rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque) {
-    if (ob->size) bufputc(ob, '\n');
-
     if (lang && lang->size) {
         size_t i, cls;
         BUFPUTSL(ob, "<pre><code class=\"");
@@ -140,23 +139,26 @@ rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, v
     } else
         BUFPUTSL(ob, "<pre><code>");
 
-    if (text)
+    if (text) {
         escape_blender(ob, text->data, text->size);
+    }
 
     BUFPUTSL(ob, "</code></pre>\n");
 }
 
 static void
 rndr_blockquote(struct buf *ob, const struct buf *text, void *opaque) {
-    if (ob->size) bufputc(ob, '\n');
     BUFPUTSL(ob, "<blockquote>\n");
-    if (text) bufput(ob, text->data, text->size);
+
+    if (text) {
+        bufput(ob, text->data, text->size);
+    }
     BUFPUTSL(ob, "</blockquote>\n");
 }
 
 static int
 rndr_codespan(struct buf *ob, const struct buf *text, void *opaque) {
-    BUFPUTSL(ob, "<code>");
+    BUFPUTSL(ob, "<code>\n");
     if (text) escape_blender(ob, text->data, text->size);
     BUFPUTSL(ob, "</code>");
     return 1;
@@ -167,9 +169,9 @@ rndr_strikethrough(struct buf *ob, const struct buf *text, void *opaque) {
     if (!text || !text->size)
         return 0;
 
-    BUFPUTSL(ob, "<del>");
+    BUFPUTSL(ob, "<del>\n");
     bufput(ob, text->data, text->size);
-    BUFPUTSL(ob, "</del>");
+    BUFPUTSL(ob, "\n</del>\n");
     return 1;
 }
 
@@ -180,7 +182,7 @@ rndr_double_emphasis(struct buf *ob, const struct buf *text, void *opaque) {
 
     BUFPUTSL(ob, "<strong>");
     bufput(ob, text->data, text->size);
-    BUFPUTSL(ob, "</strong>");
+    BUFPUTSL(ob, "</strong>\n");
 
     return 1;
 }
@@ -190,7 +192,7 @@ rndr_emphasis(struct buf *ob, const struct buf *text, void *opaque) {
     if (!text || !text->size) return 0;
     BUFPUTSL(ob, "<em>");
     if (text) bufput(ob, text->data, text->size);
-    BUFPUTSL(ob, "</em>");
+    BUFPUTSL(ob, "</em>\n");
     return 1;
 }
 
@@ -198,7 +200,7 @@ static int
 rndr_linebreak(struct buf *ob, void *opaque) {
     struct blender_renderopt *options = opaque;
     bufputs(ob, USE_BLENDER(options) ? "<br/>\n" : "<br>\n");
-    bufline(ob, 1);
+
     return 1;
 }
 
@@ -206,18 +208,24 @@ static void
 rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque) {
     struct blender_renderopt *options = opaque;
 
-    if (ob->size)
-        bufputc(ob, '\n');
-
     if (options->flags & blender_TOC)
         bufprintf(ob, "<h%d id=\"toc_%d\">", level, options->toc_data.header_count++);
-    else
-        bufprintf(ob, "<h%d>", level);
+    else {
+        int i = 0;
+        for (i = 0; i < level - 1; i++) {
+            bufputc(ob, ' ');
+            bufputc(ob, ' ');
+            bufputc(ob, ' ');
+        }
+        // bufprintf(ob, "%.*c", (level - 1) * 3, ' ');
+    }
+    if (text) {
+        bufput(ob, text->data, text->size);
+    }
+    bufputc(ob, '\n');
+    // bufprintf(ob, "</h%d>\n", level);
 
-    if (text) bufput(ob, text->data, text->size);
-    bufprintf(ob, "</h%d>\n", level);
-    bufline(ob, 1);
-}
+} /* Syntax altered: mostly */
 
 static int
 rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const struct buf *content, void *opaque) {
@@ -245,38 +253,35 @@ rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const
     }
 
     if (content && content->size) bufput(ob, content->data, content->size);
-    BUFPUTSL(ob, "</a>");
+    BUFPUTSL(ob, "\n</a>\n");
     return 1;
 }
 
 static void
 rndr_list(struct buf *ob, const struct buf *text, int flags, void *opaque) {
-    if (ob->size) bufputc(ob, '\n');
-    bufput(ob, flags & MKD_LIST_ORDERED ? "<ol>\n" : "<ul>\n", 5);
+    bufputs(ob, flags & MKD_LIST_ORDERED ? "<ol>\n" : "<ul>\n");
     if (text) bufput(ob, text->data, text->size);
-    bufput(ob, flags & MKD_LIST_ORDERED ? "</ol>\n" : "</ul>\n", 6);
-    bufline(ob, 1);
+    bufputs(ob, flags & MKD_LIST_ORDERED ? "</ol>\n" : "</ul>\n");
 }
 
 static void
 rndr_listitem(struct buf *ob, const struct buf *text, int flags, void *opaque) {
-    BUFPUTSL(ob, "    • ");
+    // BUFPUTSL(ob, "<li>\n");
+    BUFPUTSL(ob, "\t· ");
     if (text) {
         size_t size = text->size;
-        while (size && text->data[size - 1] == '\n')
+        while (size && text->data[size - 1] == '\n') {
             size--;
-
+        }
         bufput(ob, text->data, size);
     }
-    BUFPUTSL(ob, "</li>\n");
-}
+    bufputc(ob, '\n');
+} /* Syntax altered */
 
 static void
 rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque) {
     struct blender_renderopt *options = opaque;
     size_t i = 0;
-
-    if (ob->size) bufputc(ob, '\n');
 
     if (!text || !text->size)
         return;
@@ -285,7 +290,7 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque) {
 
     if (i == text->size)
         return;
-
+    bufputc(ob, '\t');
     if (options->flags & blender_HARD_WRAP) {
         size_t org;
         while (i < text->size) {
@@ -293,8 +298,9 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque) {
             while (i < text->size && text->data[i] != '\n')
                 i++;
 
-            if (i > org)
+            if (i > org) {
                 bufput(ob, text->data + org, i - org);
+            }
 
             /*
 			 * do not insert a line break if this newline
@@ -310,7 +316,9 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque) {
         bufput(ob, &text->data[i], text->size - i);
     }
     bufputc(ob, '\n');
-}
+    bufputc(ob, '\n');
+
+} /* Syntax altered */
 
 static void
 rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque) {
@@ -321,26 +329,22 @@ rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque) {
     org = 0;
     while (org < sz && text->data[org] == '\n') org++;
     if (org >= sz) return;
-    if (ob->size) bufputc(ob, '\n');
     bufput(ob, text->data + org, sz - org);
-    bufputc(ob, '\n');
 }
 
 static int
 rndr_triple_emphasis(struct buf *ob, const struct buf *text, void *opaque) {
     if (!text || !text->size) return 0;
-    BUFPUTSL(ob, "<strong><em>");
+    BUFPUTSL(ob, "<strong>\n<em>\n");
     bufput(ob, text->data, text->size);
-    BUFPUTSL(ob, "</em></strong>");
+    BUFPUTSL(ob, "\n</em>\n</strong>\n");
     return 1;
 }
 
 static void
 rndr_hrule(struct buf *ob, void *opaque) {
     struct blender_renderopt *options = opaque;
-    if (ob->size) bufputc(ob, '\n');
     bufputs(ob, USE_BLENDER(options) ? "<hr/>\n" : "<hr>\n");
-    bufline(ob, 1);
 }
 
 static int
@@ -396,22 +400,27 @@ rndr_raw_blender(struct buf *ob, const struct buf *text, void *opaque) {
 
 static void
 rndr_table(struct buf *ob, const struct buf *header, const struct buf *body, void *opaque) {
-    if (ob->size) bufputc(ob, '\n');
-    BUFPUTSL(ob, "<table><thead>\n");
-    if (header)
+    BUFPUTSL(ob, "<table>\n<thead>\n");
+
+    if (header) {
         bufput(ob, header->data, header->size);
-    BUFPUTSL(ob, "</thead><tbody>\n");
-    if (body)
+    }
+    BUFPUTSL(ob, "\n</thead>\n<tbody>\n");
+
+    if (body) {
         bufput(ob, body->data, body->size);
-    BUFPUTSL(ob, "</tbody></table>\n");
+    }
+    BUFPUTSL(ob, "\n</tbody>\n</table>\n");
 }
 
 static void
 rndr_tablerow(struct buf *ob, const struct buf *text, void *opaque) {
     BUFPUTSL(ob, "<tr>\n");
-    if (text)
+
+    if (text) {
         bufput(ob, text->data, text->size);
-    BUFPUTSL(ob, "</tr>\n");
+    }
+    BUFPUTSL(ob, "\n</tr>\n");
 }
 
 static void
@@ -439,22 +448,23 @@ rndr_tablecell(struct buf *ob, const struct buf *text, int flags, void *opaque) 
             BUFPUTSL(ob, ">");
     }
 
-    if (text)
+    if (text) {
         bufput(ob, text->data, text->size);
-
+    }
     if (flags & MKD_TABLE_HEADER) {
-        BUFPUTSL(ob, "</th>\n");
+        BUFPUTSL(ob, "\n</th>\n");
+
     } else {
-        BUFPUTSL(ob, "</td>\n");
+        BUFPUTSL(ob, "\n</td>\n");
     }
 }
 
 static int
 rndr_superscript(struct buf *ob, const struct buf *text, void *opaque) {
     if (!text || !text->size) return 0;
-    BUFPUTSL(ob, "<sup>");
+    BUFPUTSL(ob, "<sup>\n");
     bufput(ob, text->data, text->size);
-    BUFPUTSL(ob, "</sup>");
+    BUFPUTSL(ob, "\n</sup>\n");
     return 1;
 }
 
@@ -477,27 +487,27 @@ toc_header(struct buf *ob, const struct buf *text, int level, void *opaque) {
 
     if (level > options->toc_data.current_level) {
         while (level > options->toc_data.current_level) {
-            BUFPUTSL(ob, "<ul>\n    • \n");
-            bufline(ob, 1);
+            BUFPUTSL(ob, "<ul>\n<li>\n");
             options->toc_data.current_level++;
         }
     } else if (level < options->toc_data.current_level) {
-        BUFPUTSL(ob, "</li>\n");
+        BUFPUTSL(ob, "\n</li>\n");
+
         while (level < options->toc_data.current_level) {
-            BUFPUTSL(ob, "</ul>\n</li>\n");
-            bufline(ob, 1);
+            BUFPUTSL(ob, "\n</ul>\n</li>\n");
             options->toc_data.current_level--;
         }
-        BUFPUTSL(ob, "    • \n");
+        BUFPUTSL(ob, "<li>\n");
+
     } else {
-        BUFPUTSL(ob, "</li>\n    • \n");
-        bufline(ob, 1);
+        BUFPUTSL(ob, "\n</li>\n<li>\n");
     }
 
     bufprintf(ob, "<a href=\"#toc_%d\">", options->toc_data.header_count++);
-    if (text)
+    if (text) {
         escape_blender(ob, text->data, text->size);
-    BUFPUTSL(ob, "</a>\n");
+    }
+    BUFPUTSL(ob, "\n</a>\n");
 }
 
 static int
@@ -512,10 +522,9 @@ toc_finalize(struct buf *ob, void *opaque) {
     struct blender_renderopt *options = opaque;
 
     while (options->toc_data.current_level > 0) {
-        BUFPUTSL(ob, "</li>\n</ul>\n");
+        BUFPUTSL(ob, "\n</li>\n</ul>\n");
         options->toc_data.current_level--;
     }
-    bufline(ob, 2);
 }
 
 void sdblender_toc_renderer(struct sd_callbacks *callbacks, struct blender_renderopt *options) {
