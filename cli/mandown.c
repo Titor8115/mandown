@@ -15,8 +15,6 @@
  * OR rfile CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "mandown.h"
-
 #include <errno.h>
 #include <getopt.h>
 #include <locale.h>

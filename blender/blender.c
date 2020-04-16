@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../cli/mandown.h"
 #include "houdini.h"
 #include "markdown.h"
 
