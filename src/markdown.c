@@ -1,6 +1,6 @@
 /* markdown.c - generic markdown parser */
 
-/*
+/**
  * Copyright (c) 2009, Natacha Porté
  * Copyright (c) 2011, Vicent Marti
  *
@@ -233,7 +233,7 @@ free_link_refs(struct link_ref **references)
 	}
 }
 
-/*
+/**
  * Check whether a char is a Markdown space.
 
  * Right now we only consider spaces the actual

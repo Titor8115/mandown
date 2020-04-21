@@ -11,7 +11,7 @@ extern "C" {
 #	define _isxdigit(c) isxdigit(c)
 #	define _isdigit(c) isdigit(c)
 #else
-/*
+/**
  * Helper _isdigit methods -- do not trust the current locale
  * */
 #	define _isxdigit(c) (strchr("0123456789ABCDEFabcdef", (c)) != NULL)

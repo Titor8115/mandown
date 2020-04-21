@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2011, Vicent Marti
  * Copyright (c) 2019, Tianze Han
  * 
@@ -26,17 +26,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef enum {
-    BLK,
-    RED,
-    GRN,
-    YEL,
-    BLU,
-    MAG,
-    CYN,
-    WHT,
-} ansi_codes;
 
 struct blender_renderopt {
 	struct {
@@ -79,8 +68,8 @@ sdblender_renderer(struct sd_callbacks *callbacks, struct blender_renderopt *opt
 extern void
 sdblender_toc_renderer(struct sd_callbacks *callbacks, struct blender_renderopt *options_ptr);
 
-extern void
-sdblender_smartypants(struct buf *ob, const uint8_t *text, size_t size);
+extern int
+    blocks;
 
 #ifdef __cplusplus
 }

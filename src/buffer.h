@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2008, Natacha Porté
  * Copyright (c) 2011, Vicent Martí
  * Copyright (c) 2019, Tianze Han
@@ -22,13 +22,6 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#if defined(__has_include)
-#if __has_include(<ncursesw/ncurses.h>)
-#include <ncursesw/ncurses.h>
-#define HAS_NCURSES
-#endif
-#endif
 
 #ifdef __cplusplus
 extern "C" {

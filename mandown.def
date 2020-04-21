@@ -2,7 +2,6 @@ LIBRARY MANDOWN
 EXPORTS
 	sdblender_renderer
 	sdblender_toc_renderer
-	sdblender_smartypants
 	bufgrow
 	bufnew
 	bufcstr

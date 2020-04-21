@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2008, Natacha Porté
  * Copyright (c) 2011, Vicent Martí
  * Copyright (c) 2019, Tianze Han

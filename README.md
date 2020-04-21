@@ -2,7 +2,7 @@
 
 A man-page inspired Markdown reader written in C.
 
-# What is mandown
+## What is mandown
 
 Need to lookup things from README? Or from manual page? Or perhaps just want to install something cool...
 
@@ -25,6 +25,7 @@ $ make
 ```
 $ mandown ./README.md
 ```
+
 While running, press any button to exit.
 
 if it compiles but doesn't run, try updating ncurses library.
@@ -49,9 +50,9 @@ $ brew install ncurses
 
 - Format
   - [x] markdown
-  - [ ] groff
+  - [ ] troff
 - Command-line
   - [x] test version
   - [ ] cross platform testing
-- [ ] Env pathfinder
-- [ ] Ncurses Render
+- Env pathfinder
+- Ncurses Render

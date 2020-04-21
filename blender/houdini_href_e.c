@@ -6,7 +6,7 @@
 
 #define ESCAPE_GROW_FACTOR(x) (((x) * 12) / 10)
 
-/*
+/**
  * The following characters will not be escaped:
  *
  *		-_.+!*'(),%#@?=;:/,+&$ alphanum

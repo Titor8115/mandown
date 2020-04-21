@@ -26,12 +26,13 @@ DEPDIR=depends
 # "Machine-dependant" options
 #MFLAGS=-fPIC
 
-CFLAGS=-c -g -O3 -fPIC -Wall -Werror -Wsign-compare -Isrc -Iblender
-LDFLAGS=-g -O3 -Wall -Werror
+CFLAGS=-c -g -O3 -fPIC -Wall -Werror -Wsign-compare -Isrc -Iblender -I/usr/include/libxml2
+LDFLAGS=-g -O3 -lncursesw -lxml2 -Wall -Werror
 CC=gcc
 
 
 MANDOWN_SRC=\
+	cli/mandown.o \
 	src/markdown.o \
 	src/stack.o \
 	src/buffer.o \
@@ -47,14 +48,14 @@ MANDOWN_SRC=\
 # 	endif
 # endif
 
-all:		mandown blender_blocks
+all:		mandown
 
 .PHONY:		all clean
 
 # executables
 
-mandown:	cli/mandown.o $(MANDOWN_SRC)
-	$(CC) $(LDFLAGS) -lncursesw $^ -o $@
+mandown:	$(MANDOWN_SRC)
+	$(CC) $(LDFLAGS) $^ -o $@
 
 # perfect hashing
 blender_blocks: src/blender_blocks.h
@@ -68,7 +69,6 @@ clean:
 	rm -f src/*.o blender/*.o cli/*.o
 	rm -rf $(DEPDIR)
 
-
 # dependencies
 
 include $(wildcard $(DEPDIR)/*.d)
@@ -76,13 +76,8 @@ include $(wildcard $(DEPDIR)/*.d)
 
 # generic object compilations
 
-%.o:	src/%.c blender/%.c
+%.o:	cli/%.c src/%.c blender/%.c
 	@mkdir -p $(DEPDIR)
 	@$(CC) -MM $< > $(DEPDIR)/$*.d
 	$(CC) $(CFLAGS) -o $@ $<
-
-cli.o:	cli/%.c 
-	@mkdir -p $(DEPDIR)
-	@$(CC) -MM $< > $(DEPDIR)/$*.d
-	$(CC) $(CFLAGS) -I/usr/include/ncursesw -o $@ $<
 
