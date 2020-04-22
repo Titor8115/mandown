@@ -35,18 +35,56 @@ void usage() {
 }
 
 void traverse_tree(xmlNode *a_node, WINDOW *dest) {
+  int header;
   xmlNode *cur_node;
 
   for (cur_node = a_node; cur_node != NULL; cur_node = cur_node->next) {
-    // if (cur_node->name == "h1") {
-    //   wprintw(dest, "%s(7README)\n\n", cur_node->content);
-    //   wprintw(dest, "NAME\n\t%s", cur_node->content);
-    // }
-    if (cur_node->type == XML_TEXT_NODE) {
-      wprintw(dest, "%s\n", cur_node->content);
+    if (cur_node->type == XML_ELEMENT_NODE) {
+      header = xmlStrcmp(cur_node->name, (xmlChar *)"h1");
+      if ((header >= 0) && (header <= 5)) {
+        switch (header) {
+          case 0:
+            wprintw(dest, "%1$s(7README)\n\nNAME\n\t%1$s\n", xmlNodeGetContent(cur_node));
+            header = 0;
+            break;
+          case 1:
+            wprintw(dest, "\n%s\n", xmlNodeGetContent(cur_node));
+            header = 0;
+            break;
+          case 2:
+            waddch(dest, '\n');
+            wprintw(dest, "%*c", 3, ' ');
+            wprintw(dest, "%s\n", xmlNodeGetContent(cur_node));
+            header = 0;
+            break;
+          case 3:
+            waddch(dest, '\n');
+            wprintw(dest, "%*c", 6, ' ');
+            wprintw(dest, "SECTION: %s\n", xmlNodeGetContent(cur_node));
+            header = 0;
+            break;
+          case 4:
+            waddch(dest, '\n');
+            wprintw(dest, "%*c", 9, ' ');
+            wprintw(dest, "SUB SECTION: %s\n", xmlNodeGetContent(cur_node));
+            header = 0;
+            break;
+          case 5:
+            waddch(dest, '\n');
+            wprintw(dest, "%*c", 12, ' ');
+            wprintw(dest, "POINT: %s\n", xmlNodeGetContent(cur_node));
+            header = 0;
+            break;
+          default:
+            break;
+        }
+      }
+      if (xmlStrcmp(cur_node->name, (xmlChar *)"p") == 0) {
+        wprintw(dest, "\t%s\n", xmlNodeGetContent(cur_node));
+      }
     }
     traverse_tree(cur_node->children, dest);
-    }
+  }
 }
 
 int draw_ncurses(struct buf *ob) {
@@ -57,9 +95,8 @@ int draw_ncurses(struct buf *ob) {
 
   LIBXML_TEST_VERSION;
 
-  doc = xmlReadMemory((char *)(ob->data), (int)(ob->size), "noname.xml", NULL, XML_PARSE_NOBLANKS);
+  doc = xmlReadMemory((char *)(ob->data), (int)(ob->size), "noname.xml", NULL, 0);
   if (doc == NULL) {
-    // error(strerror(errno));
     error("Failed to parse document\n");
     return 1;
   }
@@ -101,7 +138,7 @@ int draw_ncurses(struct buf *ob) {
   // content_info = newwin(1, )
 
   /* Render the result */
-  traverse_tree(root_node, content);
+  traverse_tree(xmlFirstElementChild(root_node), content);
   // wprintw(content, (char *)(ob->data), (int)(ob->size));
   prefresh(content, 0, 0, 0, 0, ymax - 2, xmax);
   wgetch(content);
