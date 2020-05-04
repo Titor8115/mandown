@@ -25,7 +25,7 @@ void indentHandler(struct parts *dest, xmlChar *content, int indentChar)
         dest->height += 1;
         wresize(dest->container, dest->height, dest->width);
       }
-      wprintw(dest->container, "%c", indentChar);
+      wprintw(dest->container, "\0%c", indentChar);
     }
     else if (dest->curX == 0) {
       wprintw(dest->container, "%c", indentChar);
