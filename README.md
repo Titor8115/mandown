@@ -8,13 +8,11 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 ## Install
 
-**Current version is incomplete.**
-
-However, **it** should work on Linux and OS X.
+Current version is incomplete. However, it should work on Linux and OS X.
 
 The Ncurses UI is still being developed.
 
-```shell
+```
 $ git clone https://github.com/Titor8115/mandown.git
 $ cd mandown
 $ make
@@ -31,7 +29,6 @@ While running, press any button to exit.
 if it compiles but doesn't run, try updating ncurses library.
 
 ### Update Ncurses
-
 - Linux
 
 ```

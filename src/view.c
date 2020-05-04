@@ -9,7 +9,119 @@
 #include "buffer.h"
 #include "mandown.h"
 
-int view(struct buf *ob, int blocks) {
+
+void indentHandler(struct parts *dest, xmlChar *content, int indentChar, bool formated)
+{
+  int i, length;
+
+  length = xmlStrlen(content);
+  // wprintw(dest->container, "%d", indentChar);
+  getyx(dest->container, dest->curY, dest->curX);
+
+  for (i = 0; i < length; i++) {
+    getyx(dest->container, dest->curY, dest->curX);
+
+    if (dest->curX >= dest->width - 1) {
+      if (dest->curY >= dest->height - 1) {
+        wresize(dest->container, dest->height + 1, dest->width);
+      }
+      wprintw(dest->container, "\n%c", indentChar);
+    }
+    else if (dest->curX == 0) {
+      wprintw(dest->container, "%c", indentChar);
+    }
+    if (content[i] == '\n' && formated) {
+        content[i] = ' ';
+    }
+    waddch(dest->container, content[i]);
+  }
+}
+
+/* nodeHandler: set rendering rule for node  */
+void nodeHandler(xmlNode *node, struct parts *dest)
+{
+  xmlNode *curNode;
+  int indentChar;
+  bool formated;
+
+  for (curNode = node; curNode != NULL; curNode = curNode->next) {
+  formated = false;
+
+    if (curNode->type == XML_ELEMENT_NODE) {
+      indentChar = 0;
+      if (xmlStrEqual((xmlChar *)"p", curNode->name)) {
+        indentChar = '\t';
+      }
+      else if (xmlStrEqual((xmlChar *)"code", curNode->name)) {
+        indentChar = '\t';
+      }
+      else if (xmlStrEqual((xmlChar *)"ol", curNode->name)) {
+      }
+      else if (xmlStrEqual((xmlChar *)"ul", curNode->name)) {
+      }
+      else if (xmlStrEqual((xmlChar *)"li", curNode->name)) {
+        indentChar = '\t';
+      }
+      if (xmlStrEqual((xmlChar *)"strong", curNode->name)) {
+      }
+      else if (xmlStrEqual((xmlChar *)"em", curNode->name)) {
+      }
+      else if (xmlStrEqual((xmlChar *)"h1", curNode->name)) {
+        wprintw(dest->container, "README(7)\n\nNAME\n\t");
+      }
+      else if (xmlStrEqual((xmlChar *)"h2", curNode->name)) {
+        waddch(dest->container, '\n');
+      }
+      else if (xmlStrEqual((xmlChar *)"h3", curNode->name)) {
+        wprintw(dest->container, "\n%*c", 3, ' ');
+      }
+      else if (xmlStrEqual((xmlChar *)"h4", curNode->name)) {
+        wprintw(dest->container, "\n%*cSECTION: ", 6, ' ');
+      }
+      else if (xmlStrEqual((xmlChar *)"h5", curNode->name)) {
+        wprintw(dest->container, "\n%*cSUB SECTION: ", 9, ' ');
+      }
+      else if (xmlStrEqual((xmlChar *)"h6", curNode->name)) {
+        wprintw(dest->container, "\n%*cPOINT: ", 12, ' ');
+      }
+    }
+    else if (curNode->type == XML_TEXT_NODE) {
+      indentHandler(dest, curNode->content, indentChar, formated);
+      // waddch(dest->container, '\n');
+    }
+    nodeHandler(curNode->children, dest);
+    formated = false;
+  }
+}
+
+/* partsNew: allocation of a new pad */
+struct parts *
+partsNew()
+{
+  struct parts *ret;
+  ret = malloc(sizeof(struct parts));
+
+  if (ret) {
+    ret->container = NULL;
+    ret->height = 0;
+    ret->width = 0;
+    ret->curY = 0;
+    ret->curX = 0;
+  }
+  return ret;
+}
+
+void partsFree(struct parts *part)
+{
+  if (!part)
+    return;
+
+  delwin(part->container);
+  free(part);
+}
+
+int view(struct buf *ob, int blocks)
+{
   int ymax, xmax;
   struct parts *content, *info;
   xmlDoc *doc;
@@ -68,7 +180,7 @@ int view(struct buf *ob, int blocks) {
 
   /* Render the result */
   nodeHandler(xmlFirstElementChild(root_node), content);
-  wprintw(info->container, "%d\n", blocks);
+  wprintw(info->container, "%d\n", content->height);
   prefresh(content->container, 0, 0, 0, 0, ymax - 2, xmax);
   wrefresh(info->container);
   wgetch(content->container);
@@ -79,106 +191,6 @@ int view(struct buf *ob, int blocks) {
   partsFree(info);
   endwin();
   return 0;
-}
-
-void indentHandler(struct parts *dest, xmlChar *content, int indentChar, int indent) {
-  int length;
-
-  getyx(dest->container, dest->curY, dest->curX);
-
-  length = xmlStrlen(content);
-
-  for (int i = 0; i < length; i++) {
-    getyx(dest->container, dest->curY, dest->curX);
-    if (dest->curX >= dest->width - 1) {
-      if (dest->curY >= dest->height - 1) {
-        wresize(dest->container, dest->height + 1, dest->width);
-      }
-      wprintw(dest->container, "\n%*c", indent, indentChar);
-    } else if (dest->curX == 0) {
-      if (indent != 0 && indentChar != 0) {
-        wprintw(dest->container, "%*c\0", indent, indentChar);
-      }
-    }
-    waddch(dest->container, content[i]);
-    if (content[i] == '\n')
-      wprintw(dest->container, "%*c", indent, indentChar);
-  }
-}
-
-/* nodeHandler: set rendering rule for node  */
-void nodeHandler(xmlNode *node, struct parts *dest) {
-  xmlNode *curNode;
-  int li, indent, indentChar;
-
-  li = 1;
-  for (curNode = node; curNode != NULL; curNode = curNode->next) {
-    if (curNode->type == XML_ELEMENT_NODE) {
-      indentChar = 0;
-      indent = 0;
-
-      if (xmlStrEqual((xmlChar *)"code", curNode->name)) {
-        indentChar = '\t';
-        indent = 1;
-      } else {
-        if (xmlStrEqual((xmlChar *)"h1", curNode->name)) {
-          wprintw(dest->container, "README(7)\n\nNAME\n");
-          indentChar = '\t';
-          indent = 1;
-        } else if (xmlStrEqual((xmlChar *)"h2", curNode->name)) {
-          waddch(dest->container, '\n');
-        } else if (xmlStrEqual((xmlChar *)"h3", curNode->name)) {
-          wprintw(dest->container, "\n%*c", 3, ' ');
-        } else if (xmlStrEqual((xmlChar *)"h4", curNode->name)) {
-          wprintw(dest->container, "\n%*cSECTION: ", 6, ' ');
-        } else if (xmlStrEqual((xmlChar *)"h5", curNode->name)) {
-          wprintw(dest->container, "\n%*cSUB SECTION: ", 9, ' ');
-        } else if (xmlStrEqual((xmlChar *)"h6", curNode->name)) {
-          wprintw(dest->container, "\n%*cPOINT: ", 12, ' ');
-        } else if (xmlStrEqual((xmlChar *)"code", curNode->name)) {
-        } else {
-        }
-        // else if (xmlStrEqual((xmlChar *)"ul", curNode->name)) {
-        //   li = 1;
-        // } else if (xmlStrEqual((xmlChar *)"ol", curNode->name)) {
-        //   li = 1;
-        // }
-      }
-    } else if (curNode->type == XML_TEXT_NODE) {
-      // wprintw(dest->container, "[%s]", curNode->parent->name);
-      if (xmlStrEqual((xmlChar *)"p", curNode->parent->name)) {
-        indentChar = '\t';
-        indent = 1;
-      }
-
-      indentHandler(dest, curNode->content, indentChar, indent);
-    }
-    nodeHandler(curNode->children, dest);
-  }
-}
-
-/* partsNew: allocation of a new pad */
-struct parts *
-partsNew() {
-  struct parts *ret;
-  ret = malloc(sizeof(struct parts));
-
-  if (ret) {
-    ret->container = NULL;
-    ret->height = 0;
-    ret->width = 0;
-    ret->curY = 0;
-    ret->curX = 0;
-  }
-  return ret;
-}
-
-void partsFree(struct parts *part) {
-  if (!part)
-    return;
-
-  delwin(part->container);
-  free(part);
 }
 
 // int newlines = 0, Choice = 0, Key = 0;
