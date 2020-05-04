@@ -157,7 +157,7 @@ rndr_blockquote(struct buf *ob, const struct buf *text, void *opaque) {
 static int
 rndr_codespan(struct buf *ob, const struct buf *text, void *opaque) {
   BUFPUTSL(ob, "<code>");
-  if (text) escape_blender(ob, text->data, text->size);
+  if (text) bufput(ob, text->data, text->size);
   BUFPUTSL(ob, "</code>");
   blocks++;
   return 1;

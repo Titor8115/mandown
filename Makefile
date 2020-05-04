@@ -26,27 +26,20 @@ DEPDIR=depends
 # "Machine-dependant" options
 #MFLAGS=-fPIC
 
-CFLAGS=-c -g -O3 -fPIC -Wall -Werror -Wsign-compare -Isrc -Iblender -I/usr/include/libxml2
+CFLAGS=-c -g -O3 -fPIC -Wall -Wsign-compare -Iparser -Iblender -Iinclude -I/usr/include/libxml2
 LDFLAGS=-g -O3 -lncursesw -lxml2 -Wall -Werror
 CC=gcc
 
-
 MANDOWN_SRC=\
-	cli/mandown.o \
-	src/markdown.o \
-	src/stack.o \
-	src/buffer.o \
-	src/autolink.o \
+	src/mandown.o \
+	src/view.o \
+	parser/markdown.o \
+	parser/stack.o \
+	parser/buffer.o \
+	parser/autolink.o \
 	blender/blender.o \
 	blender/houdini_blender_e.o \
 	blender/houdini_href_e.o
-
-# ifeq ($(UNAME_S),Linux)
-# 	LSB_RELEASE := $(shell lsb_release -si 2>/dev/null || echo not)
-# 	ifneq ($(filter $(LSB_RELEASE),Debian Ubuntu LinuxMint CrunchBang),)
-# 		LDLIBS += -I/usr/include/ncursesw
-# 	endif
-# endif
 
 all:		mandown
 
@@ -58,15 +51,16 @@ mandown:	$(MANDOWN_SRC)
 	$(CC) $(LDFLAGS) $^ -o $@
 
 # perfect hashing
-blender_blocks: src/blender_blocks.h
+blender_blocks: parser/blender_blocks.h
 
-src/blender_blocks.h: blender_block_names.txt
+parser/blender_blocks.h: blender_block_names.txt
 	gperf -N find_block_tag -H hash_block_tag -C -c -E --ignore-case $^ > $@
 
 
 # housekeeping
 clean:
-	rm -f src/*.o blender/*.o cli/*.o
+	rm -f ./mandown
+	rm -f parser/*.o blender/*.o src/*.o
 	rm -rf $(DEPDIR)
 
 # dependencies
@@ -76,7 +70,7 @@ include $(wildcard $(DEPDIR)/*.d)
 
 # generic object compilations
 
-%.o:	cli/%.c src/%.c blender/%.c
+%.o:	src/%.c parser/%.c blender/%.c
 	@mkdir -p $(DEPDIR)
 	@$(CC) -MM $< > $(DEPDIR)/$*.d
 	$(CC) $(CFLAGS) -o $@ $<
