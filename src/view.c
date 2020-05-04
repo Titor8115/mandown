@@ -9,8 +9,7 @@
 #include "buffer.h"
 #include "mandown.h"
 
-
-void indentHandler(struct parts *dest, xmlChar *content, int indentChar, bool formated)
+void indentHandler(struct parts *dest, xmlChar *content, int indentChar)
 {
   int i, length;
 
@@ -21,18 +20,19 @@ void indentHandler(struct parts *dest, xmlChar *content, int indentChar, bool fo
   for (i = 0; i < length; i++) {
     getyx(dest->container, dest->curY, dest->curX);
 
-    if (dest->curX >= dest->width - 1) {
+    if ((dest->curX >= dest->width - 1) || content[i] == '\n') {
       if (dest->curY >= dest->height - 1) {
-        wresize(dest->container, dest->height + 1, dest->width);
+        dest->height += 1;
+        wresize(dest->container, dest->height, dest->width);
       }
-      wprintw(dest->container, "\n%c", indentChar);
+      wprintw(dest->container, "%c", indentChar);
     }
     else if (dest->curX == 0) {
       wprintw(dest->container, "%c", indentChar);
     }
-    if (content[i] == '\n' && formated) {
-        content[i] = ' ';
-    }
+    // if (content[i] == '\n' && !formated) {
+    //   content[i] = ' ';
+    // }
     waddch(dest->container, content[i]);
   }
 }
@@ -42,31 +42,10 @@ void nodeHandler(xmlNode *node, struct parts *dest)
 {
   xmlNode *curNode;
   int indentChar;
-  bool formated;
 
   for (curNode = node; curNode != NULL; curNode = curNode->next) {
-  formated = false;
-
     if (curNode->type == XML_ELEMENT_NODE) {
-      indentChar = 0;
-      if (xmlStrEqual((xmlChar *)"p", curNode->name)) {
-        indentChar = '\t';
-      }
-      else if (xmlStrEqual((xmlChar *)"code", curNode->name)) {
-        indentChar = '\t';
-      }
-      else if (xmlStrEqual((xmlChar *)"ol", curNode->name)) {
-      }
-      else if (xmlStrEqual((xmlChar *)"ul", curNode->name)) {
-      }
-      else if (xmlStrEqual((xmlChar *)"li", curNode->name)) {
-        indentChar = '\t';
-      }
-      if (xmlStrEqual((xmlChar *)"strong", curNode->name)) {
-      }
-      else if (xmlStrEqual((xmlChar *)"em", curNode->name)) {
-      }
-      else if (xmlStrEqual((xmlChar *)"h1", curNode->name)) {
+      if (xmlStrEqual((xmlChar *)"h1", curNode->name)) {
         wprintw(dest->container, "README(7)\n\nNAME\n\t");
       }
       else if (xmlStrEqual((xmlChar *)"h2", curNode->name)) {
@@ -86,11 +65,29 @@ void nodeHandler(xmlNode *node, struct parts *dest)
       }
     }
     else if (curNode->type == XML_TEXT_NODE) {
-      indentHandler(dest, curNode->content, indentChar, formated);
+      indentChar = 0;
+
+      if (xmlStrEqual((xmlChar *)"p", curNode->parent->name)) {
+        indentChar = '\t';
+      }
+      else if (xmlStrEqual((xmlChar *)"code", curNode->parent->name)) {
+        indentChar = '\t';
+      }
+      else if (xmlStrEqual((xmlChar *)"ol", curNode->parent->name)) {
+      }
+      else if (xmlStrEqual((xmlChar *)"ul", curNode->parent->name)) {
+      }
+      else if (xmlStrEqual((xmlChar *)"li", curNode->parent->name)) {
+        indentChar = '\t';
+      }
+      else if (xmlStrEqual((xmlChar *)"strong", curNode->parent->name)) {
+      }
+      else if (xmlStrEqual((xmlChar *)"em", curNode->parent->name)) {
+      }
+      indentHandler(dest, curNode->content, indentChar);
       // waddch(dest->container, '\n');
     }
     nodeHandler(curNode->children, dest);
-    formated = false;
   }
 }
 
@@ -167,7 +164,7 @@ int view(struct buf *ob, int blocks)
 
   getmaxyx(stdscr, ymax, xmax);
   content = partsNew();
-  content->height = blocks + 1;
+  content->height = blocks;
   content->width = xmax;
   content->container = newpad(content->height, content->width);
   keypad(content->container, TRUE); /* enable arrow keys */
@@ -181,7 +178,7 @@ int view(struct buf *ob, int blocks)
   /* Render the result */
   nodeHandler(xmlFirstElementChild(root_node), content);
   wprintw(info->container, "%d\n", content->height);
-  prefresh(content->container, 0, 0, 0, 0, ymax - 2, xmax);
+  prefresh(content->container, 0, 0, 0, 0, ymax - 1, xmax);
   wrefresh(info->container);
   wgetch(content->container);
 

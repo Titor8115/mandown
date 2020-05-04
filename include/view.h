@@ -27,7 +27,7 @@ typedef enum {
 
 int view(struct buf *, int);
 
-void formatHandler(struct parts *, xmlChar *, int, bool);
+void formatHandler(struct parts *, xmlChar *, int);
 
 void nodeHandler(xmlNode *, struct parts *);
 
