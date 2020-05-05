@@ -24,7 +24,7 @@ $ make
 $ mandown ./README.md
 ```
 
-While running, press 'q' button to exit.
+While running, press <kbd>q</kbd> button to exit.
 
 if it compiles but doesn't run, try updating ncurses library.
 
@@ -47,8 +47,11 @@ $ brew install ncurses
 - Format
   - [x] markdown
   - [ ] troff
+
 - Command-line
   - [x] test version
-  - [ ] cross platform testing
-- Env pathfinder
-- Ncurses Render
+  - [ ] document pathfinder
+
+- Ncurses
+  - [x] keyboard control
+  - [ ] coloring
