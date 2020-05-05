@@ -4,7 +4,6 @@
 
 #include "buffer.h"
 
-#define TABSIZE 8
 
 struct parts {
   WINDOW *container;

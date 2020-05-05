@@ -84,7 +84,10 @@ void nodeHandler(xmlNode *node, struct parts *dest)
       }
       else if (xmlStrEqual((xmlChar *)"em", curNode->parent->name)) {
       }
+      // if (xmlStrlen(curNode->content) > 1)
+
       indentHandler(dest, curNode->content, indentChar);
+      wattrset(dest->container, A_NORMAL);
       // waddch(dest->container, '\n');
     }
     nodeHandler(curNode->children, dest);
@@ -119,10 +122,10 @@ void partsFree(struct parts *part)
 
 int view(struct buf *ob, int blocks)
 {
-  int ymax, xmax;
+  int ymax, xmax, key, curLine;
   struct parts *content, *info;
   xmlDoc *doc;
-  xmlNode *root_node;
+  xmlNode *rootNode;
 
   LIBXML_TEST_VERSION;
 
@@ -132,8 +135,8 @@ int view(struct buf *ob, int blocks)
     return 1;
   }
 
-  root_node = xmlDocGetRootElement(doc);
-  if (root_node == NULL) {
+  rootNode = xmlDocGetRootElement(doc);
+  if (rootNode == NULL) {
     error("empty document\n");
     xmlFreeDoc(doc);
     return 1;
@@ -169,18 +172,38 @@ int view(struct buf *ob, int blocks)
   content->container = newpad(content->height, content->width);
   keypad(content->container, TRUE); /* enable arrow keys */
 
-  // content_info = newwin(1, )
   info = partsNew();
   info->height = 1;
   info->width = xmax;
   info->container = newwin(info->height, info->width, ymax - 1, 0);
+  scrollok(info->container, TRUE);
 
   /* Render the result */
-  nodeHandler(xmlFirstElementChild(root_node), content);
-  wprintw(info->container, "%d\n", content->height);
-  prefresh(content->container, 0, 0, 0, 0, ymax - 1, xmax);
+  nodeHandler(xmlFirstElementChild(rootNode), content);
+
+  curLine = 0;
+  prefresh(content->container, curLine, 0, 0, 0, ymax - 1, xmax);
+  wprintw(info->container, "\n%d%% (press q to quit)", ((curLine + ymax + 1) * 100) / content->height);
   wrefresh(info->container);
-  wgetch(content->container);
+  // wgetch(content->container);
+
+  while ((key = wgetch(content->container)) != 'q') {
+    switch (key) {
+      case KEY_UP:
+        if (curLine > 0)
+          curLine--;
+        break;
+      case KEY_DOWN:
+        if (curLine + ymax < content->height - 1)
+          curLine++;
+        break;
+      default:
+        break;
+    }
+    prefresh(content->container, curLine, 0, 0, 0, ymax - 1, xmax);
+    wprintw(info->container, "\n%d%% (press q to quit)", ((curLine + ymax + 1) * 100) / content->height);
+    wrefresh(info->container);
+  }
 
   /* Clean up */
   xmlFreeDoc(doc);
@@ -198,45 +221,6 @@ int view(struct buf *ob, int blocks)
 // keypad(content->container, true);
 // waddwstr(content->container, c_str());
 // refresh();
-// int cols = 0;
-// while ((Key = wgetch(content->container)) != 'q') {
-//     prefresh(content->container, cols, 0, 0, 0, ymax, xmax);
-//     switch (Key) {
-//         case KEY_UP: {
-//             if (cols <= 0) continue;
-//             cols--;
-//             break;
-//         }
-//         case KEY_DOWN: {
-//             if (cols + ymax + 1 >= PadHeight) continue;
-//             cols++;
-//             break;
-//         }
-//         case KEY_PPAGE: /* Page Up */
-//         {
-//             if (cols <= 0) continue;
-//             cols -= xmax;
-//             if (cols < 0) cols = 0;
-//             break;
-//         }
-//         case KEY_NPAGE: /* Page Down */
-//             if (cols + ymax + 1 >= PadHeight) continue;
-//             cols += Height;
-//             if (cols + ymax + 1 > PadHeight) cols = PadHeight - Height - 1;
-//             break;
-//         case KEY_HOME:
-//             cols = 0;
-//             break;
-//         case KEY_END:
-//             cols = PadHeight - Height - 1;
-//             break;
-//         case 10: /* Enter */
-//         {
-//             Choice = 1;
-//             break;
-//         }
-//     }
-//     refresh();
-// }
+// int curLine = 0;
 
 /* vim: set filetype=c: */

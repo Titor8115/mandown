@@ -94,9 +94,10 @@ int main(int argc, char **argv) {
 
   /* Render */
   ret = view(ob, blocks);
-  // fprintf(stdout, (char *)ob->data);
+
   /* Clean up */
   bufrelease(ib);
   bufrelease(ob);
+
   return ret;
 }
