@@ -24,7 +24,7 @@ $ make
 $ mandown ./README.md
 ```
 
-While running, press any button to exit.
+While running, press 'q' button to exit.
 
 if it compiles but doesn't run, try updating ncurses library.
 
