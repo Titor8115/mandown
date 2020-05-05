@@ -28,17 +28,12 @@ While running, press <kbd>q</kbd> button to exit.
 
 if it compiles but doesn't run, try updating ncurses library.
 
-### Update Ncurses
-
-- Linux
 ```
 $ apt-get install libncursesw5-dev
 ```
 
-- OS X
-```
-$ brew install ncurses
-```
+Mandown currently depends on libncursesw.
+I haven't tested if it could also run under libncurses.
 
 ## Looking for helps
 
