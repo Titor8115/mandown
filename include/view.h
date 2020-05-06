@@ -4,7 +4,6 @@
 
 #include "buffer.h"
 
-
 struct parts {
   WINDOW *container;
   int height;
@@ -14,22 +13,18 @@ struct parts {
 };
 
 typedef enum {
-  //   BLK,
-  red = 1,
+  standard,
+  red,
   green,
   yellow,
   blue,
   magenta,
   cyan,
-  white,
+  invert,
 } palette;
 
 int view(struct buf *, int);
-
-void formatHandler(struct parts *, xmlChar *, int);
-
-void nodeHandler(xmlNode *, struct parts *);
-
-struct parts *partsNew();
-
-void partsFree(struct parts *);
+void styleHandler(struct parts *, xmlChar *, int, int);
+void nodeHandler(xmlNode *, struct parts *); /* Set rendering rule for node  */
+struct parts *partsNew();                    /* Allocate new WINDOW and its information */
+void partsFree(struct parts *);              /* Free WINDOW and its information*/
