@@ -16,25 +16,38 @@
 
 void message(const char *contents)
 {
-  fprintf(stdout, "%s\n", contents);
+  fprintf(stdout, "%s%snote: %s%s\n", "\033[1m", "\033[36m", "\033[0m", contents);
 }
 
 void error(const char *contents)
 {
-  fprintf(stderr, "%s%sError: %s%s\n", "\033[1m", "\033[31m", "\033[0m", contents);
+  fprintf(stderr, "%s%serror: %s%s\n", "\033[1m", "\033[31m", "\033[0m", contents);
 }
 
 void warning(const char *contents)
 {
-  fprintf(stderr, "%s%sWarning: %s%s\n", "\033[1m", "\033[33m", "\033[0m", contents);
+  fprintf(stderr, "%s%swarning: %s%s\n", "\033[1m", "\033[33m", "\033[0m", contents);
 }
 
 void usage()
 {
-  fprintf(stderr, "%s", "Usage: mandown <filename>\n");
-  fprintf(stderr, "%c", '\n');
-  fprintf(stderr, "%s", "Linux man-page like Markdown Viewer\n");
-  exit(EXIT_FAILURE);
+  fprintf(stdout, "%s", "mdn - Markdown Manual, a man(1) like markdown pager\n");
+  fprintf(stdout, "%s", "Usage: mdn [options...] <filename>\n");
+  fprintf(stdout, "%s", "\n");
+  fprintf(stdout, "%s", "  -f,\t--file\toptional flag for filepath\n");
+  fprintf(stdout, "%s", "  -h,\t--help\tthis help text\n");
+  fprintf(stdout, "%s", "\n");
+  fprintf(stdout, "%s", "Pager control:\n");
+  fprintf(stdout, "%s", "\n");
+  fprintf(stdout, "%s", "  Scroll Up:\t\u2191\t\t<arrow up>\n");
+  fprintf(stdout, "%s", "\t\tBACKSPACE\t<backspace>\n");
+  fprintf(stdout, "%s", "  Scroll Down:\t\u2193\t\t<arrow down>\n");
+  fprintf(stdout, "%s", "\t\tENTER\t\t<enter>\n");
+  fprintf(stdout, "%s", "  Exit:\t\tq\t\t<q>\n");
+  fprintf(stdout, "%s", "\n");
+  fprintf(stdout, "%s", "mdn is still under development.\n");
+  fprintf(stdout, "%s", "Next featuring HTML render.\n");
+  fprintf(stdout, "%s", "Looking for co-work buddies!\n");
 }
 
 int main(int argc, char **argv)
@@ -42,7 +55,7 @@ int main(int argc, char **argv)
   int opt;
   char *file = NULL;
 
-  int ret;
+  int ret, i;
   FILE *in;
   struct buf *ib, *ob;
   struct sd_callbacks callbacks;
@@ -52,27 +65,30 @@ int main(int argc, char **argv)
   /* Get current working directory */
   if (argc < 2) {
     usage();
-  }
-  else if (argc == 2) {
-    file = argv[1];
+    exit(EXIT_FAILURE);
   }
   else {
-    while ((opt = getopt(argc, argv, "f:")) != -1) {
+    while ((opt = getopt(argc, argv, "hf:")) != -1) {
       switch (opt) {
         case 'f':
           file = optarg;
           break;
-        case ':':
-          fprintf(stderr, "%s: -'%c' needs an argument\n", argv[0], optopt);
+        case 'h':
           usage();
+          exit(EXIT_SUCCESS);
+          // case '?':
           break;
-        case '?':
         default:
-          fprintf(stderr, "%s: Unknown option -'%c'\n", argv[0], optopt);
-          usage();
           break;
       }
     }
+    for (i = optind; i < argc; i++) {
+      file = argv[optind];
+    }
+  }
+
+  if (file == NULL) {
+    exit(EXIT_FAILURE);
   }
 
   /* Reading file */
@@ -92,18 +108,20 @@ int main(int argc, char **argv)
 
   /* Prepare for nodeHandler */
   ob = bufnew(OUTPUT_UNIT);
+  bufprintf(ob, "<article>\n<title >%s(7)</title>", file);
   sdblender_renderer(&callbacks, &options, 0);
   markdown = sd_markdown_new(0, 16, &callbacks, &options);
-  bufprintf(ob, "<div><title>%s(7)</title>\n", file);
   sd_markdown_render(ob, ib->data, ib->size, markdown);
   sd_markdown_free(markdown);
-  bufprintf(ob, "</div>\n");
+  bufprintf(ob, "</article>\n");
+
+  bufrelease(ib);
 
   /* Render */
   ret = view(ob, blocks);
   // fprintf(stdout, (char *)ob->data);
+
   /* Clean up */
-  bufrelease(ib);
   bufrelease(ob);
 
   return ret;

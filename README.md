@@ -1,10 +1,28 @@
 # mandown
 
-A man-page inspired Markdown reader written in C.
+A man-page inspired Markdown pager written in C.
 
-## What is mandown
+## What is it
 
-Need to lookup things from README? Or from manual page? Or perhaps just want to install something cool...
+Need to lookup things from README? Or from manual page? Or perhaps just want to install something cool... (**Looking for work buddies**)
+
+## Sample
+
+😊 is rendered
+
+- This is a bullet
+
+This is <u>underline</u>
+
+This is <em>italic</em>
+
+This is <strong>bold</strong>
+
+This is a <kbd>key</kbd>
+
+Can you see this <s>strickthrough</s> or this <del>strickthrough</del>?
+
+`This is a code block`
 
 ## Install
 
@@ -12,7 +30,7 @@ Current version is incomplete. However, it should work on Linux and OS X.
 
 The Ncurses UI is still being developed.
 
-```shell
+```bash
 $ git clone https://github.com/Titor8115/mandown.git
 $ cd mandown
 $ make
@@ -20,22 +38,27 @@ $ make
 
 ### Usage
 
-```
-$ mandown ./README.md
+```bash
+$ cd mandown
+$ ./mdn README.md
 ```
 
-While running, press <kbd>q</kbd> button to exit.
+Mouse wheel scrolling is supported! (if your terminal emulator allows)
+
+Scroll Up: <kbd>↑</kbd>, <kbd>BACKSPACE</kbd>
+
+Scroll Down: <kbd>↓</kbd>, <kbd>ENTER</kbd>
+
+Exit: <kbd>q</kbd>
 
 if it compiles but doesn't run, try updating ncurses library.
 
-```
+```bash
 $ apt-get install libncursesw5-dev
 ```
 
 Mandown currently depends on libncursesw.
 I haven't tested if it could also run under libncurses.
-
-## Looking for helps
 
 ## Todo
 

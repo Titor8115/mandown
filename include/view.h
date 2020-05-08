@@ -4,6 +4,8 @@
 
 #include "buffer.h"
 
+#define ENTER 10
+
 struct parts {
   WINDOW *container;
   int height;
@@ -13,18 +15,18 @@ struct parts {
 };
 
 typedef enum {
-  standard,
+  black,
   red,
   green,
   yellow,
   blue,
   magenta,
   cyan,
-  invert,
+  white,
 } palette;
 
 int view(struct buf *, int);
-void styleHandler(struct parts *, xmlChar *, int, int);
-void nodeHandler(xmlNode *, struct parts *); /* Set rendering rule for node  */
-struct parts *partsNew();                    /* Allocate new WINDOW and its information */
-void partsFree(struct parts *);              /* Free WINDOW and its information*/
+void styleHandler(struct parts *, xmlChar *, int);
+void nodeHandler(xmlNode *, struct parts *); /* set rendering rule for node  */
+struct parts *partsNew();                    /* allocate new WINDOW and its information */
+void partsFree(struct parts *);              /* free Ncurses WINDOW */

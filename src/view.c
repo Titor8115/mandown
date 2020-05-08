@@ -9,11 +9,10 @@
 #include "buffer.h"
 #include "mandown.h"
 
-void styleHandler(struct parts *dest, xmlChar *content, int indentChar, int color)
+void styleHandler(struct parts *dest, xmlChar *content, int indentChar)
 {
   int i, length;
   length = xmlStrlen(content);
-  wattron(dest->container, COLOR_PAIR(color));
 
   for (i = 0; i < length; i++) {
 
@@ -31,89 +30,104 @@ void styleHandler(struct parts *dest, xmlChar *content, int indentChar, int colo
     }
     waddch(dest->container, content[i]);
   }
-  wattrset(dest->container, 0);
 }
 
 void nodeHandler(xmlNode *node, struct parts *dest)
 {
   xmlNode *curNode;
-  int indentChar, color;
+  char *context;
+  int indentChar;
 
   for (curNode = node; curNode != NULL; curNode = curNode->next) {
     indentChar = 0;
-    color = standard;
-
+    context = NULL;
     if (curNode->type == XML_ELEMENT_NODE) {
-      if (xmlStrEqual((xmlChar *)"title", curNode->name)) {
+      if (xmlStrEqual((xmlChar *)"article", curNode->parent->name)) {
+        if (!xmlStrEqual((xmlChar *)"title", curNode->name))
+          styleHandler(dest, (xmlChar *)"\n", indentChar);
       }
-      else if (xmlStrEqual((xmlChar *)"p", curNode->name)) {
-        if ((curNode->parent == NULL) || xmlStrEqual((xmlChar *)"div", curNode->parent->name))
-          styleHandler(dest, (xmlChar *)"\n", indentChar, color);
-      }
-      else if (xmlStrEqual((xmlChar *)"code", curNode->name)) {
-      }
-
-      else if (xmlStrEqual((xmlChar *)"li", curNode->name)) {
+      if (xmlStrEqual((xmlChar *)"li", curNode->name)) {
         if (xmlStrlen(curNode->children->content) < 1)
-          styleHandler(dest, (xmlChar *)"\n\t\u2022 ", indentChar, color);
+          context = "\n\t+- ";
       }
       else {
         wattron(dest->container, A_BOLD);
+
         if (xmlStrEqual((xmlChar *)"h1", curNode->name)) {
-          wprintw(dest->container, "\n\nNAME\n\t");
+          context = "\nNAME\n\t";
         }
         else if (xmlStrEqual((xmlChar *)"h2", curNode->name)) {
-          wprintw(dest->container, "\n\n");
+          context = "\n";
         }
         else if (xmlStrEqual((xmlChar *)"h3", curNode->name)) {
-          wprintw(dest->container, "\n\n   ");
+          context = "\n   ";
         }
         else if (xmlStrEqual((xmlChar *)"h4", curNode->name)) {
-          wprintw(dest->container, "\n\n      SECTION: ");
+          context = "\n      SECTION: ";
         }
         else if (xmlStrEqual((xmlChar *)"h5", curNode->name)) {
-          wprintw(dest->container, "\n\n         SUB SECTION: ");
+          context = "\n         SUB SECTION: ";
         }
         else if (xmlStrEqual((xmlChar *)"h6", curNode->name)) {
-          wprintw(dest->container, "\n\n            POINT: ");
+          context = "\n            POINT: ";
         }
-        wattroff(dest->container, A_BOLD);
       }
+
+      if (context != NULL) {
+        styleHandler(dest, (xmlChar *)context, indentChar);
+      }
+      wattrset(dest->container, 0);
     }
     else if (curNode->type == XML_TEXT_NODE) {
+      indentChar = '\t';
+
       if (xmlStrEqual((xmlChar *)"title", curNode->parent->name)) {
-        styleHandler(dest, curNode->content, indentChar, color);
+        indentChar = 0;
       }
       else if (xmlStrEqual((xmlChar *)"p", curNode->parent->name)) {
-        indentChar = '\t';
-        styleHandler(dest, curNode->content, indentChar, color);
+        wattrset(dest->container, 0);
       }
       else if (xmlStrEqual((xmlChar *)"code", curNode->parent->name)) {
-        indentChar = '\t';
-        color = yellow;
+        wattron(dest->container, A_CHARTEXT);
+        wattron(dest->container, COLOR_PAIR(yellow));
+        styleHandler(dest, (xmlChar *)">> ", indentChar);
 
-        // wattron(dest->container, COLOR_PAIR(invert));
-        // wbkgdset(dest->container, COLOR_PAIR(invert));
-        styleHandler(dest, curNode->content, indentChar, color);
-        // wbkgdset(dest->container, COLOR_PAIR(standard));
       }
       else if (xmlStrEqual((xmlChar *)"li", curNode->parent->name)) {
-        styleHandler(dest, (xmlChar *)"\n\t    \u2022 ", indentChar, color);
-        styleHandler(dest, curNode->content, indentChar, color);
+        context = "\n    +- ";
       }
       else if (xmlStrEqual((xmlChar *)"strong", curNode->parent->name)) {
-        styleHandler(dest, curNode->content, indentChar, color);
+        wattron(dest->container, A_BOLD);
       }
       else if (xmlStrEqual((xmlChar *)"em", curNode->parent->name)) {
-        styleHandler(dest, curNode->content, indentChar, color);
+        wattron(dest->container, A_ITALIC);
+      }
+      else if (xmlStrEqual((xmlChar *)"u", curNode->parent->name)) {
+        wattron(dest->container, A_UNDERLINE);
+      }
+      else if (xmlStrEqual((xmlChar *)"s", curNode->parent->name)) {
+        wattron(dest->container, A_INVIS);
+        wattron(dest->container, A_REVERSE);
+      }
+      else if (xmlStrEqual((xmlChar *)"del", curNode->parent->name)) {
+        wattron(dest->container, A_INVIS);
+        wattron(dest->container, A_REVERSE);
+      }
+      else if (xmlStrEqual((xmlChar *)"kbd", curNode->parent->name)) {
+        wattron(dest->container, A_DIM);
       }
       else {
+        indentChar = 0;
         wattron(dest->container, A_BOLD);
-        wprintw(dest->container, "%s", curNode->content);
-        wattroff(dest->container, A_BOLD);
       }
-      // wattrset(dest->container, 0);
+
+      if (context != NULL) {
+        styleHandler(dest, (xmlChar *)context, indentChar);
+      }
+      styleHandler(dest, curNode->content, indentChar);
+      wattrset(dest->container, 0);
     }
+
     nodeHandler(curNode->children, dest);
   }
 }
@@ -138,7 +152,6 @@ void partsFree(struct parts *part)
 {
   if (!part)
     return;
-
   delwin(part->container);
   free(part);
 }
@@ -152,6 +165,62 @@ int view(struct buf *ob, int blocks)
 
   LIBXML_TEST_VERSION;
 
+  //  Initialize ncurses
+  setlocale(LC_ALL, "");
+  initscr();
+  cbreak(); /* make getch() process one char at a time */
+  noecho(); /* disable output of keyboard typing */
+
+  // keypad(stdscr, TRUE); /* enable arrow keys */
+  // curs_set(0); /* disable cursor */
+
+  //  Initialize colors if terminal support
+  if (has_colors()) {
+    start_color();
+    use_default_colors();
+
+    //  todo: 256 color mode
+    if (COLORS == 256) {
+      init_pair(black, COLOR_BLACK, COLOR_WHITE);
+      init_pair(red, COLOR_RED, -1);
+      init_pair(green, COLOR_GREEN, -1);
+      init_pair(yellow, COLOR_YELLOW, -1);
+      init_pair(blue, COLOR_BLUE, -1);
+      init_pair(magenta, COLOR_MAGENTA, -1);
+      init_pair(cyan, COLOR_CYAN, -1);
+      init_pair(white, COLOR_WHITE, -1);
+    }
+    //  8 color mode
+    else {
+      init_pair(black, COLOR_BLACK, COLOR_WHITE);
+      init_pair(red, COLOR_RED, -1);
+      init_pair(green, COLOR_GREEN, -1);
+      init_pair(yellow, COLOR_YELLOW, -1);
+      init_pair(blue, COLOR_BLUE, -1);
+      init_pair(magenta, COLOR_MAGENTA, -1);
+      init_pair(cyan, COLOR_CYAN, -1);
+      init_pair(white, COLOR_WHITE, -1);
+    }
+  }
+
+  getmaxyx(stdscr, ymax, xmax);
+  pageHeight = ymax - 1;
+  curLine = 0;
+
+  content = partsNew(); /* file content */
+  info = partsNew();    /* info content at bottom */
+
+  content->height = blocks;
+  content->width = xmax;
+  content->container = newpad(content->height, content->width);
+  keypad(content->container, TRUE); /* enable arrow keys */
+
+  info->height = 1;
+  info->width = xmax;
+  info->container = newwin(info->height, info->width, pageHeight, 0);
+  scrollok(info->container, TRUE); /* newline implement as auto refresh */
+
+  //  Render result
   doc = xmlReadMemory((char *)(ob->data), (int)(ob->size), "noname.xml", NULL, XML_PARSE_NOBLANKS);
   if (doc == NULL) {
     error("Failed to parse document\n");
@@ -165,50 +234,13 @@ int view(struct buf *ob, int blocks)
     return 1;
   }
 
-  /* Initialize ncurses */
-  setlocale(LC_CTYPE, "");
-  initscr();
-  // keypad(stdscr, TRUE); /* enable arrow keys */
-  // curs_set(0); /* disable cursor */
-  cbreak(); /* make getch() process one char at a time */
-  noecho(); /* disable output of keyboard typing */
-  // idlok(stdscr, TRUE);  /* allow use of insert/delete line */
+  nodeHandler(rootNode, content);
+  xmlFreeDoc(doc);
 
-  /* Initialize all colors if terminal support color */
-  if (has_colors()) {
-    start_color();
-    use_default_colors();
-    init_pair(standard, COLOR_WHITE, COLOR_BLACK);
-    init_pair(red, COLOR_RED, -1);
-    init_pair(green, COLOR_GREEN, -1);
-    init_pair(yellow, COLOR_YELLOW, -1);
-    init_pair(blue, COLOR_BLUE, -1);
-    init_pair(magenta, COLOR_MAGENTA, -1);
-    init_pair(cyan, COLOR_CYAN, -1);
-    init_pair(invert, COLOR_BLACK, COLOR_WHITE);
-  }
-
-  getmaxyx(stdscr, ymax, xmax);
-  pageHeight = ymax - 1;
-
-  content = partsNew();
-  content->height = blocks;
-  content->width = xmax;
-  content->container = newpad(content->height, content->width);
-  keypad(content->container, TRUE); /* enable arrow keys */
-
-  info = partsNew();
-  info->height = 1;
-  info->width = xmax;
-  info->container = newwin(info->height, info->width, pageHeight, 0);
-  scrollok(info->container, TRUE);
-
-  /* Render the result */
-  nodeHandler(xmlFirstElementChild(rootNode), content);
-
-  curLine = 0;
   prefresh(content->container, curLine, 0, 0, 0, pageHeight, xmax);
-  wattron(info->container, COLOR_PAIR(invert));
+
+  //  Render initial all content sections
+  wattrset(info->container, A_REVERSE);
   if (pageHeight >= content->height) {
     wprintw(info->container, "\n Markdown page (ALL) (press q to quit)");
   }
@@ -217,14 +249,15 @@ int view(struct buf *ob, int blocks)
   }
 
   wrefresh(info->container);
-  // wgetch(content->container);
 
   while ((key = wgetch(content->container)) != 'q') {
     switch (key) {
+      case KEY_BACKSPACE:
       case KEY_UP:
         if (curLine > 0)
           curLine--;
         break;
+      case ENTER:
       case KEY_DOWN:
         if (curLine + pageHeight < content->height)
           curLine++;
@@ -248,8 +281,7 @@ int view(struct buf *ob, int blocks)
     wrefresh(info->container);
   }
 
-  /* Clean up */
-  xmlFreeDoc(doc);
+  //  Clean up
   partsFree(content);
   partsFree(info);
   endwin();
