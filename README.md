@@ -40,7 +40,7 @@ $ make
 
 ```bash
 $ cd mandown
-$ ./mdn README.md
+$ ./mandown README.md
 ```
 
 Mouse wheel scrolling is supported! (if your terminal emulator allows)
