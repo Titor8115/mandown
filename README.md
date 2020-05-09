@@ -2,6 +2,8 @@
 
 A man-page inspired Markdown pager written in C.
 
+Considering to change the name in later release.
+
 ## What is it
 
 Need to lookup things from README? Or from manual page? Or perhaps just want to install something cool... (**Looking for work buddies**)
@@ -20,7 +22,7 @@ This is <strong>bold</strong>
 
 This is a <kbd>key</kbd>
 
-Can you see this <s>strickthrough</s> or this <del>strickthrough</del>?
+Can you see this <s>strikethrough</s> or this <del>strikethrough</del>?
 
 `This is a code block`
 
@@ -40,7 +42,7 @@ $ make
 
 ```bash
 $ cd mandown
-$ ./mdn README.md
+$ ./mandown README.md
 ```
 
 Mouse wheel scrolling is supported! (if your terminal emulator allows)
@@ -72,4 +74,4 @@ I haven't tested if it could also run under libncurses.
 
 - Ncurses
   - [x] keyboard control
-  - [ ] coloring
+  - [x] coloring
