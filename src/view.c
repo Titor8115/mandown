@@ -165,6 +165,20 @@ int view(struct buf *ob, int blocks)
 
   LIBXML_TEST_VERSION;
 
+  //  Render result
+  doc = xmlReadMemory((char *)(ob->data), (int)(ob->size), "noname.xml", NULL, XML_PARSE_NOBLANKS);
+  if (doc == NULL) {
+    error("Failed to parse document\n");
+    return 1;
+  }
+
+  rootNode = xmlDocGetRootElement(doc);
+  if (rootNode == NULL) {
+    error("empty document\n");
+    xmlFreeDoc(doc);
+    return 1;
+  }
+
   //  Initialize ncurses
   setlocale(LC_ALL, "");
   initscr();
@@ -219,20 +233,6 @@ int view(struct buf *ob, int blocks)
   info->width = xmax;
   info->container = newwin(info->height, info->width, pageHeight, 0);
   scrollok(info->container, TRUE); /* newline implement as auto refresh */
-
-  //  Render result
-  doc = xmlReadMemory((char *)(ob->data), (int)(ob->size), "noname.xml", NULL, XML_PARSE_NOBLANKS);
-  if (doc == NULL) {
-    error("Failed to parse document\n");
-    return 1;
-  }
-
-  rootNode = xmlDocGetRootElement(doc);
-  if (rootNode == NULL) {
-    error("empty document\n");
-    xmlFreeDoc(doc);
-    return 1;
-  }
 
   nodeHandler(rootNode, content);
   xmlFreeDoc(doc);
