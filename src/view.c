@@ -3,7 +3,7 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <locale.h>
-#include <ncursesw/ncurses.h>
+#include <ncurses.h>
 #include <stdio.h>
 
 #include "buffer.h"
