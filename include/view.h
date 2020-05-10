@@ -4,6 +4,8 @@
 
 #include "buffer.h"
 
+#define FOLDS 7
+
 #define ENTER 10
 
 struct parts {
@@ -25,8 +27,14 @@ typedef enum {
   white,
 } palette;
 
+#define STRING_IS(string, name) \
+  xmlStrEqual((xmlChar *)string, name)
+
+#define FORMAT(to, string, indent) \
+  formatHandler(to, (xmlChar *)string, indent)
+
 int view(struct buf *, int);
-void styleHandler(struct parts *, xmlChar *, int);
-void nodeHandler(xmlNode *, struct parts *); /* set rendering rule for node  */
+void indentHandler(struct parts *, xmlChar *, int);
+void nodeHandler(xmlNode *, struct parts *, int); /* set rendering rule for node  */
 struct parts *partsNew();                    /* allocate new WINDOW and its information */
 void partsFree(struct parts *);              /* free Ncurses WINDOW */

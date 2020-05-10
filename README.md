@@ -10,9 +10,11 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 ## Sample
 
-😊 is rendered
-
-- This is a bullet
+- This is nested list
+  - 😊 is rendered
+    - So is 🌚 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔
+      - It is 🔥
+- Me right now 💀
 
 This is <u>underline</u>
 

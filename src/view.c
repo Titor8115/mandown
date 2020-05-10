@@ -9,126 +9,159 @@
 #include "buffer.h"
 #include "mandown.h"
 
-void styleHandler(struct parts *dest, xmlChar *content, int indentChar)
+void formatHandler(struct parts *dest, xmlChar *content, int line_fold)
 {
   int i, length;
+
   length = xmlStrlen(content);
-
   for (i = 0; i < length; i++) {
-
     getyx(dest->container, dest->curY, dest->curX);
+
+      if (i && i + 1 == length && content[i] == '\n')
+        break;
 
     if ((dest->curX >= dest->width - 1) || content[i] == '\n') {
       if (dest->curY >= dest->height - 1) {
         dest->height += 1;
         wresize(dest->container, dest->height, dest->width);
       }
-      wprintw(dest->container, "\0%c", indentChar);
     }
     else if (dest->curX == 0) {
-      wprintw(dest->container, "%c", indentChar);
+      wattron(dest->container, A_INVIS);
+      wprintw(dest->container, "%*s", line_fold, "");
+      wattroff(dest->container, A_INVIS);
     }
     waddch(dest->container, content[i]);
   }
 }
 
-void nodeHandler(xmlNode *node, struct parts *dest)
+void nodeHandler(xmlNode *node, struct parts *dest, int indent)
 {
   xmlNode *curNode;
   char *context;
-  int indentChar;
+  int line_fold;
+
+  line_fold = indent;
 
   for (curNode = node; curNode != NULL; curNode = curNode->next) {
-    indentChar = 0;
     context = NULL;
     if (curNode->type == XML_ELEMENT_NODE) {
-      if (xmlStrEqual((xmlChar *)"article", curNode->parent->name)) {
-        if (!xmlStrEqual((xmlChar *)"title", curNode->name))
-          styleHandler(dest, (xmlChar *)"\n", indentChar);
+      if (STRING_IS("article", curNode->parent->name)) {
+        wattrset(dest->container, A_NORMAL);
+        if (STRING_IS("title", curNode->name)) {
+          line_fold = 0;
+        }
+        else {
+          line_fold = FOLDS;
+          FORMAT(dest, "\n", line_fold);
+        }
       }
-      if (xmlStrEqual((xmlChar *)"li", curNode->name)) {
-        if (xmlStrlen(curNode->children->content) < 1)
-          context = "\n\t+- ";
-      }
-      else {
-        wattron(dest->container, A_BOLD);
-
-        if (xmlStrEqual((xmlChar *)"h1", curNode->name)) {
-          context = "\nNAME\n\t";
-        }
-        else if (xmlStrEqual((xmlChar *)"h2", curNode->name)) {
-          context = "\n";
-        }
-        else if (xmlStrEqual((xmlChar *)"h3", curNode->name)) {
-          context = "\n   ";
-        }
-        else if (xmlStrEqual((xmlChar *)"h4", curNode->name)) {
-          context = "\n      SECTION: ";
-        }
-        else if (xmlStrEqual((xmlChar *)"h5", curNode->name)) {
-          context = "\n         SUB SECTION: ";
-        }
-        else if (xmlStrEqual((xmlChar *)"h6", curNode->name)) {
-          context = "\n            POINT: ";
+      else if (STRING_IS("li", curNode->parent->name)) {
+        if (!STRING_IS("ul", curNode->name)) {
+          FORMAT(dest, "\n", line_fold);
+          if (line_fold >= indent) {
+            context = "\u00b7 ";
+          }
         }
       }
 
-      if (context != NULL) {
-        styleHandler(dest, (xmlChar *)context, indentChar);
+      if (STRING_IS("ul", curNode->name)) {
+        line_fold += 3;
       }
-      wattrset(dest->container, 0);
-    }
-    else if (curNode->type == XML_TEXT_NODE) {
-      indentChar = '\t';
-
-      if (xmlStrEqual((xmlChar *)"title", curNode->parent->name)) {
-        indentChar = 0;
-      }
-      else if (xmlStrEqual((xmlChar *)"p", curNode->parent->name)) {
+      else if (STRING_IS("p", curNode->name)) {
         wattrset(dest->container, 0);
       }
-      else if (xmlStrEqual((xmlChar *)"code", curNode->parent->name)) {
-        wattron(dest->container, A_CHARTEXT);
-        wattron(dest->container, COLOR_PAIR(yellow));
-        styleHandler(dest, (xmlChar *)">> ", indentChar);
-
+      else if (STRING_IS("li", curNode->name)) {
+        line_fold = indent;
       }
-      else if (xmlStrEqual((xmlChar *)"li", curNode->parent->name)) {
-        context = "\n    +- ";
-      }
-      else if (xmlStrEqual((xmlChar *)"strong", curNode->parent->name)) {
+      else if (STRING_IS("h1", curNode->name)) {  //  header 1 as .SH "NAME"
+        line_fold = 0;
+        context = "\nNAME";
         wattron(dest->container, A_BOLD);
       }
-      else if (xmlStrEqual((xmlChar *)"em", curNode->parent->name)) {
-        wattron(dest->container, A_ITALIC);
+      else if (STRING_IS("h2", curNode->name)) {  //  header 2 for other .SH
+        line_fold = 0;
+        context = "\n";
+        wattron(dest->container, A_BOLD);
       }
-      else if (xmlStrEqual((xmlChar *)"u", curNode->parent->name)) {
-        wattron(dest->container, A_UNDERLINE);
+      else if (STRING_IS("h3", curNode->name)) {  //  header 3 for .SS
+        line_fold = 0;
+        context = "\n   ";
+        wattron(dest->container, A_BOLD);
       }
-      else if (xmlStrEqual((xmlChar *)"s", curNode->parent->name)) {
-        wattron(dest->container, A_INVIS);
-        wattron(dest->container, A_REVERSE);
+      else if (STRING_IS("h4", curNode->name)) {  //  header 4 as Sub of .SS
+        line_fold = 4;
+        context = "\nSUB: ";
+        wattron(dest->container, A_BOLD);
       }
-      else if (xmlStrEqual((xmlChar *)"del", curNode->parent->name)) {
-        wattron(dest->container, A_INVIS);
-        wattron(dest->container, A_REVERSE);
+      else if (STRING_IS("h5", curNode->name)) {  //  header 5 as Points in Sub
+        line_fold = 5;
+        context = "\nPT: ";
+        wattron(dest->container, A_BOLD);
       }
-      else if (xmlStrEqual((xmlChar *)"kbd", curNode->parent->name)) {
-        wattron(dest->container, A_DIM);
-      }
-      else {
-        indentChar = 0;
+      else if (STRING_IS("h6", curNode->name)) {  //  header 6 as Sub of Points
+        line_fold = 6;
+        context = "\nPT SUB: ";
         wattron(dest->container, A_BOLD);
       }
 
       if (context != NULL) {
-        styleHandler(dest, (xmlChar *)context, indentChar);
+        FORMAT(dest, context, line_fold);
       }
-      styleHandler(dest, curNode->content, indentChar);
-      wattrset(dest->container, 0);
+    }
+    else if (curNode->type == XML_TEXT_NODE) {
+      if (STRING_IS("p", curNode->parent->name)) {
+        wattrset(dest->container, A_NORMAL);
+      }
+      else if (STRING_IS("code", curNode->parent->name)) {
+        wattron(dest->container, A_CHARTEXT);
+        wattron(dest->container, COLOR_PAIR(yellow));
+        context = ">> ";
+      }
+      else if (STRING_IS("li", curNode->parent->name)) {
+        context = "\n\u00b7 ";
+      }
+      else if (STRING_IS("strong", curNode->parent->name)) {
+        wattron(dest->container, A_BOLD);
+      }
+      else if (STRING_IS("em", curNode->parent->name)) {
+        wattron(dest->container, A_ITALIC);
+      }
+      else if (STRING_IS("u", curNode->parent->name)) {
+        wattron(dest->container, A_UNDERLINE);
+      }
+      else if (STRING_IS("s", curNode->parent->name)) {
+        wattron(dest->container, A_INVIS);
+        wattron(dest->container, A_REVERSE);
+      }
+      else if (STRING_IS("del", curNode->parent->name)) {
+        wattron(dest->container, A_INVIS);
+        wattron(dest->container, A_REVERSE);
+      }
+      else if (STRING_IS("kbd", curNode->parent->name)) {
+        wattron(dest->container, A_DIM);
+      }
+      else if (STRING_IS("a", curNode->parent->name)) {
+        wattron(dest->container, A_UNDERLINE);
+        wattron(dest->container, COLOR_PAIR(blue));
+      }
+
+      else if (STRING_IS("h1", curNode->parent->name)) {
+        context = "\n";
+        line_fold = FOLDS;
+      }
+      else {
+      }
+
+      if (context != NULL) {
+        FORMAT(dest, context, line_fold);
+      }
+      if (!STRING_IS("\n", curNode->content)) {
+        FORMAT(dest, curNode->content, line_fold);
+      }
     }
 
-    nodeHandler(curNode->children, dest);
+    nodeHandler(curNode->children, dest, line_fold);
   }
 }
 
@@ -195,7 +228,7 @@ int view(struct buf *ob, int blocks)
 
     //  todo: 256 color mode
     if (COLORS == 256) {
-      init_pair(black, COLOR_BLACK, COLOR_WHITE);
+      init_pair(black, COLOR_BLACK, -1);
       init_pair(red, COLOR_RED, -1);
       init_pair(green, COLOR_GREEN, -1);
       init_pair(yellow, COLOR_YELLOW, -1);
@@ -206,7 +239,7 @@ int view(struct buf *ob, int blocks)
     }
     //  8 color mode
     else {
-      init_pair(black, COLOR_BLACK, COLOR_WHITE);
+      init_pair(black, COLOR_BLACK, -1);
       init_pair(red, COLOR_RED, -1);
       init_pair(green, COLOR_GREEN, -1);
       init_pair(yellow, COLOR_YELLOW, -1);
@@ -234,7 +267,7 @@ int view(struct buf *ob, int blocks)
   info->container = newwin(info->height, info->width, pageHeight, 0);
   scrollok(info->container, TRUE); /* newline implement as auto refresh */
 
-  nodeHandler(rootNode, content);
+  nodeHandler(rootNode, content, FOLDS);
   xmlFreeDoc(doc);
 
   prefresh(content->container, curLine, 0, 0, 0, pageHeight, xmax);
