@@ -48,7 +48,7 @@ all:		mandown
 # executables
 
 mandown:	$(MANDOWN_SRC)
-	$(CC) $(LDFLAGS) $^ -o $@
+	$(CC) $^ -o $@ $(LDFLAGS)
 
 # perfect hashing
 blender_blocks: parser/blender_blocks.h
