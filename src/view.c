@@ -3,7 +3,6 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <locale.h>
-#include <ncursesw/ncurses.h>
 #include <stdio.h>
 
 #include "buffer.h"
@@ -17,8 +16,8 @@ void formatHandler(struct parts *dest, xmlChar *content, int line_fold)
   for (i = 0; i < length; i++) {
     getyx(dest->container, dest->curY, dest->curX);
 
-      if (i && i + 1 == length && content[i] == '\n')
-        break;
+    if (i && i + 1 == length && content[i] == '\n')
+      break;
 
     if ((dest->curX >= dest->width - 1) || content[i] == '\n') {
       if (dest->curY >= dest->height - 1) {
@@ -37,120 +36,122 @@ void formatHandler(struct parts *dest, xmlChar *content, int line_fold)
 
 void nodeHandler(xmlNode *node, struct parts *dest, int indent)
 {
-  xmlNode *curNode;
   char *context;
   int line_fold;
+  int attr[3];
 
+  xmlNode *curNode;
   line_fold = indent;
 
   for (curNode = node; curNode != NULL; curNode = curNode->next) {
     context = NULL;
+    attr[0] = standard;
+    attr[1] = A_NORMAL;
+    attr[2] = A_NORMAL;
     if (curNode->type == XML_ELEMENT_NODE) {
       if (STRING_IS("article", curNode->parent->name)) {
-        wattrset(dest->container, A_NORMAL);
-        if (STRING_IS("title", curNode->name)) {
+        wattrset(dest->container, 0);
+        if (STRING_IS("title", curNode->name))
           line_fold = 0;
-        }
         else {
           line_fold = FOLDS;
           FORMAT(dest, "\n", line_fold);
         }
       }
-      else if (STRING_IS("li", curNode->parent->name)) {
+      if (STRING_IS("li", curNode->parent->name)) {
         if (!STRING_IS("ul", curNode->name)) {
           FORMAT(dest, "\n", line_fold);
-          if (line_fold >= indent) {
-            context = "\u00b7 ";
-          }
+          // if (line_fold >= indent)
+          context = "\u00b7 ";
         }
       }
 
-      if (STRING_IS("ul", curNode->name)) {
+      if (STRING_IS("ul", curNode->name) || STRING_IS("ul", curNode->name)) {  // * unordered list
         line_fold += 3;
       }
-      else if (STRING_IS("p", curNode->name)) {
-        wattrset(dest->container, 0);
+      else if (STRING_IS("p", curNode->name)) {  // * paragraph
+        // wattrset(dest->container, 0);
       }
-      else if (STRING_IS("li", curNode->name)) {
-        line_fold = indent;
+      else if (STRING_IS("li", curNode->name)) {  //  * list item
+        // line_fold = indent;
       }
-      else if (STRING_IS("h1", curNode->name)) {  //  header 1 as .SH "NAME"
+      else if (STRING_IS("code", curNode->name)) {  //  * codeblock
+        attr[1] = A_CHARTEXT;
+        attr[0] = yellow;
+        context = ">> ";
+      }
+      else if (STRING_IS("strong", curNode->name)) {  //  * bold
+        attr[1] = A_BOLD;
+      }
+      else if (STRING_IS("em", curNode->name)) {  //  * italic
+        attr[1] = A_ITALIC;
+      }
+      else if (STRING_IS("u", curNode->name) || STRING_IS("ins", curNode->name)) {  // * underline
+        attr[1] = A_UNDERLINE;
+      }
+      else if (STRING_IS("s", curNode->name) || STRING_IS("del", curNode->name)) {  // * strikethrough
+        attr[1] = A_INVIS;
+        attr[2] = A_REVERSE;
+      }
+      else if (STRING_IS("kbd", curNode->name)) {  //  * keyboard input
+        attr[1] = A_DIM;
+      }
+      else if (STRING_IS("a", curNode->name)) {  //  * hyperlink
+        attr[1] = A_UNDERLINE;
+        attr[0] = blue;
+      }
+      else if (STRING_IS("h1", curNode->name)) {  //  * header 1 as .SH "NAME"
         line_fold = 0;
         context = "\nNAME";
-        wattron(dest->container, A_BOLD);
+        attr[1] = A_BOLD;
       }
-      else if (STRING_IS("h2", curNode->name)) {  //  header 2 for other .SH
+      else if (STRING_IS("h2", curNode->name)) {  //  * header 2 for other .SH
         line_fold = 0;
         context = "\n";
-        wattron(dest->container, A_BOLD);
+        attr[1] = A_BOLD;
       }
-      else if (STRING_IS("h3", curNode->name)) {  //  header 3 for .SS
+      else if (STRING_IS("h3", curNode->name)) {  //  * header 3 for .SS
         line_fold = 0;
         context = "\n   ";
-        wattron(dest->container, A_BOLD);
+        attr[1] = A_BOLD;
       }
-      else if (STRING_IS("h4", curNode->name)) {  //  header 4 as Sub of .SS
+      else if (STRING_IS("h4", curNode->name)) {  //  * header 4 as Sub of .SS
         line_fold = 4;
         context = "\nSUB: ";
-        wattron(dest->container, A_BOLD);
+        attr[1] = A_BOLD;
       }
-      else if (STRING_IS("h5", curNode->name)) {  //  header 5 as Points in Sub
+      else if (STRING_IS("h5", curNode->name)) {  //  * header 5 as Points in Sub
         line_fold = 5;
         context = "\nPT: ";
-        wattron(dest->container, A_BOLD);
+        attr[1] = A_BOLD;
       }
-      else if (STRING_IS("h6", curNode->name)) {  //  header 6 as Sub of Points
+      else if (STRING_IS("h6", curNode->name)) {  // * header 6 as Sub of Points
         line_fold = 6;
         context = "\nPT SUB: ";
-        wattron(dest->container, A_BOLD);
+        attr[1] = A_BOLD;
+      }
+      else {
+        if (STRING_IS("img", curNode->name)) {
+          context = GET_PROP("alt", curNode);
+          attr[1] = A_UNDERLINE;
+          attr[0] = blue;
+        }
       }
 
+      wattron(dest->container, COLOR_PAIR(attr[0]));
+      wattron(dest->container, attr[1]);
+      wattron(dest->container, attr[2]);
       if (context != NULL) {
         FORMAT(dest, context, line_fold);
       }
     }
     else if (curNode->type == XML_TEXT_NODE) {
-      if (STRING_IS("p", curNode->parent->name)) {
-        wattrset(dest->container, A_NORMAL);
-      }
-      else if (STRING_IS("code", curNode->parent->name)) {
-        wattron(dest->container, A_CHARTEXT);
-        wattron(dest->container, COLOR_PAIR(yellow));
-        context = ">> ";
-      }
-      else if (STRING_IS("li", curNode->parent->name)) {
+      if (STRING_IS("li", curNode->parent->name)) {
         context = "\n\u00b7 ";
       }
-      else if (STRING_IS("strong", curNode->parent->name)) {
-        wattron(dest->container, A_BOLD);
-      }
-      else if (STRING_IS("em", curNode->parent->name)) {
-        wattron(dest->container, A_ITALIC);
-      }
-      else if (STRING_IS("u", curNode->parent->name)) {
-        wattron(dest->container, A_UNDERLINE);
-      }
-      else if (STRING_IS("s", curNode->parent->name)) {
-        wattron(dest->container, A_INVIS);
-        wattron(dest->container, A_REVERSE);
-      }
-      else if (STRING_IS("del", curNode->parent->name)) {
-        wattron(dest->container, A_INVIS);
-        wattron(dest->container, A_REVERSE);
-      }
-      else if (STRING_IS("kbd", curNode->parent->name)) {
-        wattron(dest->container, A_DIM);
-      }
-      else if (STRING_IS("a", curNode->parent->name)) {
-        wattron(dest->container, A_UNDERLINE);
-        wattron(dest->container, COLOR_PAIR(blue));
-      }
-
       else if (STRING_IS("h1", curNode->parent->name)) {
         context = "\n";
         line_fold = FOLDS;
-      }
-      else {
       }
 
       if (context != NULL) {
@@ -159,9 +160,12 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
       if (!STRING_IS("\n", curNode->content)) {
         FORMAT(dest, curNode->content, line_fold);
       }
+      // wattrset(dest->container, A_NORMAL);
     }
-
     nodeHandler(curNode->children, dest, line_fold);
+    wattroff(dest->container, COLOR_PAIR(attr[0]));
+    wattroff(dest->container, attr[1]);
+    wattroff(dest->container, attr[2]);
   }
 }
 
@@ -199,7 +203,7 @@ int view(struct buf *ob, int blocks)
   LIBXML_TEST_VERSION;
 
   //  Render result
-  doc = xmlReadMemory((char *)(ob->data), (int)(ob->size), "noname.xml", NULL, XML_PARSE_NOBLANKS);
+  doc = xmlReadMemory((char *)(ob->data), (int)(ob->size), "noname.xml", NULL, XML_PARSE_RECOVER | XML_PARSE_NOBLANKS);
   if (doc == NULL) {
     error("Failed to parse document\n");
     return 1;
@@ -228,7 +232,7 @@ int view(struct buf *ob, int blocks)
 
     //  todo: 256 color mode
     if (COLORS == 256) {
-      init_pair(black, COLOR_BLACK, -1);
+      init_pair(standard, -1, -1);
       init_pair(red, COLOR_RED, -1);
       init_pair(green, COLOR_GREEN, -1);
       init_pair(yellow, COLOR_YELLOW, -1);
@@ -239,7 +243,7 @@ int view(struct buf *ob, int blocks)
     }
     //  8 color mode
     else {
-      init_pair(black, COLOR_BLACK, -1);
+      init_pair(standard, -1, -1);
       init_pair(red, COLOR_RED, -1);
       init_pair(green, COLOR_GREEN, -1);
       init_pair(yellow, COLOR_YELLOW, -1);

@@ -341,7 +341,7 @@ rndr_hrule(struct buf *ob, void *opaque) {
 
 static int
 rndr_image(struct buf *ob, const struct buf *link, const struct buf *title, const struct buf *alt, void *opaque) {
-  struct blender_renderopt *options = opaque;
+  // struct blender_renderopt *options = opaque;
   if (!link || !link->size) return 0;
 
   BUFPUTSL(ob, "<img src=\"");
@@ -356,7 +356,7 @@ rndr_image(struct buf *ob, const struct buf *link, const struct buf *title, cons
     escape_blender(ob, title->data, title->size);
   }
 
-  bufputs(ob, USE_BLENDER(options) ? "\"/>" : "\">");
+  bufputs(ob, "\"/>");
   return 1;
 }
 

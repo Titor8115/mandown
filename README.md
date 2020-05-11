@@ -10,13 +10,15 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 ## Sample
 
+![screenshot](./screenshot.png)
+
 - This is nested list
   - 😊 is rendered
     - So is 🌚 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔
       - It is 🔥
 - Me right now 💀
 
-This is <u>underline</u>
+This is <ins>underline</ins>
 
 This is <em>italic</em>
 
@@ -67,10 +69,12 @@ I haven't tested if it could also run under libncurses.
 ## Todo
 
 - Format
+
   - [x] markdown
   - [ ] troff
 
 - Command-line
+
   - [x] test version
   - [ ] document pathfinder
 

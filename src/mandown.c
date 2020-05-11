@@ -31,23 +31,24 @@ void warning(const char *contents)
 
 void usage()
 {
-  fprintf(stdout, "%s", "mdn - Markdown Manual, a man(1) like markdown pager\n");
-  fprintf(stdout, "%s", "Usage: mdn [options...] <filename>\n");
-  fprintf(stdout, "%s", "\n");
-  fprintf(stdout, "%s", "  -f,\t--file\toptional flag for filepath\n");
-  fprintf(stdout, "%s", "  -h,\t--help\tthis help text\n");
-  fprintf(stdout, "%s", "\n");
-  fprintf(stdout, "%s", "Pager control:\n");
-  fprintf(stdout, "%s", "\n");
-  fprintf(stdout, "%s", "  Scroll Up:\t\u2191\t\t<arrow up>\n");
-  fprintf(stdout, "%s", "\t\tBACKSPACE\t<backspace>\n");
-  fprintf(stdout, "%s", "  Scroll Down:\t\u2193\t\t<arrow down>\n");
-  fprintf(stdout, "%s", "\t\tENTER\t\t<enter>\n");
-  fprintf(stdout, "%s", "  Exit:\t\tq\t\t<q>\n");
-  fprintf(stdout, "%s", "\n");
-  fprintf(stdout, "%s", "mdn is still under development.\n");
-  fprintf(stdout, "%s", "Next featuring HTML render.\n");
-  fprintf(stdout, "%s", "Looking for co-work buddies!\n");
+  fprintf(stdout, "%s\n", "mdn - Markdown Manual, a man(1) like markdown pager");
+  fprintf(stdout, "%s\n\n", "Usage: mdn [options...] <filename>");
+
+  fprintf(stdout, "%-20s%s\n", "  -f, --file", "optional flag for filepath");
+  fprintf(stdout, "%-20s%s\n\n", "  -h, --help", "this help text");
+
+  fprintf(stdout, "%s\n\n", "Pager control:");
+
+  fprintf(stdout, "%-20s%-10s%s\n", "  Scroll Up:", "\u2191", "  <arrow up>");
+  fprintf(stdout, "%-20s%-10s%s\n", "", "BACKSPACE", "<backspace>");
+  fprintf(stdout, "%-20s%-10s%s\n", "", "k", "<k>");
+
+  fprintf(stdout, "%-20s%-10s%s\n", "  Scroll Down:", "\u2193", "  <arrow down>");
+  fprintf(stdout, "%-20s%-10s%s\n", "", "ENTER", "<enter>");
+  fprintf(stdout, "%-20s%-10s%s\n", "", "j", "<j>");
+
+  fprintf(stdout, "%-20s%-10s%s\n\n", "  Exit:", "q", "<q>");
+  fprintf(stdout, "%s", "It is still under development. Next featuring HTML render. Looking for co-work buddies!\n");
 }
 
 int main(int argc, char **argv)

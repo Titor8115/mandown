@@ -1,11 +1,17 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+
+#if defined __has_include
+#if __has_include(<ncursesw/ncurses.h>)
 #include <ncursesw/ncurses.h>
+#elif __has_include(<ncurses.h>)
+#include <ncurses.h>
+#endif
+#endif
 
 #include "buffer.h"
 
 #define FOLDS 7
-
 #define ENTER 10
 
 struct parts {
@@ -17,7 +23,7 @@ struct parts {
 };
 
 typedef enum {
-  black,
+  standard,
   red,
   green,
   yellow,
@@ -27,8 +33,11 @@ typedef enum {
   white,
 } palette;
 
-#define STRING_IS(string, name) \
-  xmlStrEqual((xmlChar *)string, name)
+#define STRING_IS(string, node) \
+  xmlStrEqual((xmlChar *)string, node)
+
+#define GET_PROP(string, node) \
+  (char *)xmlGetProp(node, (xmlChar *)string)
 
 #define FORMAT(to, string, indent) \
   formatHandler(to, (xmlChar *)string, indent)
@@ -36,5 +45,5 @@ typedef enum {
 int view(struct buf *, int);
 void indentHandler(struct parts *, xmlChar *, int);
 void nodeHandler(xmlNode *, struct parts *, int); /* set rendering rule for node  */
-struct parts *partsNew();                    /* allocate new WINDOW and its information */
-void partsFree(struct parts *);              /* free Ncurses WINDOW */
+struct parts *partsNew();                         /* allocate new WINDOW and its information */
+void partsFree(struct parts *);                   /* free Ncurses WINDOW */
