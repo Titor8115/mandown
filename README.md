@@ -16,7 +16,7 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
   - 😊 is rendered
     - So is 🌚 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔
       - It is 🔥
-- Me right now 💀
+        - Me right now 💀
 
 This is <ins>underline</ins>
 
@@ -32,9 +32,9 @@ Can you see this <s>strikethrough</s> or this <del>strikethrough</del>?
 
 ## Install
 
-Current version is incomplete. However, it should work on Linux and OS X.
+Current version is incomplete. However, it should work on simpler Markdown documents.
 
-The Ncurses UI is still being developed.
+The Ncurses UI is still being developed for different HTML tags.
 
 ```bash
 $ git clone https://github.com/Titor8115/mandown.git
@@ -57,14 +57,11 @@ Scroll Down: <kbd>↓</kbd>, <kbd>j</kbd>, <kbd>ENTER</kbd>
 
 Exit: <kbd>q</kbd>
 
-if it compiles but doesn't run, try updating ncurses library.
+if it compiles but doesn't run, try updating your ncurses library.
 
 ```bash
 $ apt-get install libncursesw5-dev
 ```
-
-Mandown currently depends on libncursesw.
-I haven't tested if it could also run under libncurses.
 
 ## Todo
 
