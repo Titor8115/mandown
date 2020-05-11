@@ -27,7 +27,7 @@ DEPDIR=depends
 #MFLAGS=-fPIC
 
 CFLAGS=-c -g -O3 -fPIC -Wall -Wsign-compare -Iparser -Iblender -Iinclude -I/usr/include/libxml2
-LDFLAGS=-g -O3 -lncursesw -lxml2 -Wall -Werror
+LDFLAGS=-g -O3 -Wl,--copy-dt-needed-entries -lncursesw -lxml2 -Wall -Werror
 CC=gcc
 
 MANDOWN_SRC=\

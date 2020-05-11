@@ -289,11 +289,13 @@ int view(struct buf *ob, int blocks)
 
   while ((key = wgetch(content->container)) != 'q') {
     switch (key) {
+      case 'k':
       case KEY_BACKSPACE:
       case KEY_UP:
         if (curLine > 0)
           curLine--;
         break;
+      case 'j':
       case ENTER:
       case KEY_DOWN:
         if (curLine + pageHeight < content->height)

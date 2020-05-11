@@ -51,9 +51,9 @@ $ ./mandown README.md
 
 Mouse wheel scrolling is supported! (if your terminal emulator allows)
 
-Scroll Up: <kbd>↑</kbd>, <kbd>BACKSPACE</kbd>
+Scroll Up: <kbd>↑</kbd>, <kbd>k</kbd>, <kbd>BACKSPACE</kbd>
 
-Scroll Down: <kbd>↓</kbd>, <kbd>ENTER</kbd>
+Scroll Down: <kbd>↓</kbd>, <kbd>j</kbd>, <kbd>ENTER</kbd>
 
 Exit: <kbd>q</kbd>
 
