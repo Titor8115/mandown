@@ -16,7 +16,7 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
   - 😊 is rendered
     - So is 🌚 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔
       - It is 🔥
-- Me right now 💀
+        - Me right now 💀
 
 This is <ins>underline</ins>
 
