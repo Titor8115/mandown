@@ -1,6 +1,8 @@
 #include "view.h"
 
-#include <libxml/parser.h>
+// #include <libxml/parser.h>
+#include <libxml/HTMLparser.h>
+#include <libxml/HTMLtree.h>
 #include <libxml/tree.h>
 #include <locale.h>
 #include <stdio.h>
@@ -40,7 +42,9 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
   int line_fold;
   int attr[3];
 
+  xmlBufferPtr buffer;
   xmlNode *curNode;
+
   line_fold = indent;
 
   for (curNode = node; curNode != NULL; curNode = curNode->next) {
@@ -49,7 +53,7 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
     attr[1] = A_NORMAL;
     attr[2] = A_NORMAL;
     if (curNode->type == XML_ELEMENT_NODE) {
-      if (STRING_IS("article", curNode->parent->name)) {
+      if (STRING_IS("body", curNode->parent->name)) {
         wattrset(dest->container, 0);
         if (STRING_IS("title", curNode->name))
           line_fold = 0;
@@ -58,11 +62,11 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
           FORMAT(dest, "\n", line_fold);
         }
       }
-      if (STRING_IS("li", curNode->parent->name)) {
+      else if (STRING_IS("li", curNode->parent->name)) {
         if (!STRING_IS("ul", curNode->name)) {
-          FORMAT(dest, "\n", line_fold);
+          // FORMAT(dest, "\n", line_fold);
           // if (line_fold >= indent)
-          context = "\u00b7 ";
+          // context = "\u00b7 ";
         }
       }
 
@@ -73,12 +77,25 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
         // wattrset(dest->container, 0);
       }
       else if (STRING_IS("li", curNode->name)) {  //  * list item
+        context = "\n\u00b7 ";
+
         // line_fold = indent;
       }
       else if (STRING_IS("code", curNode->name)) {  //  * codeblock
+        buffer = xmlBufferCreate();
+        xmlNodeDump(buffer, curNode->children->doc, curNode->children, 0, 0);
         attr[1] = A_CHARTEXT;
         attr[0] = yellow;
-        context = ">> ";
+        line_fold = indent + 3;
+        wattron(dest->container, COLOR_PAIR(attr[0]));
+        wattron(dest->container, attr[1]);
+        wattron(dest->container, attr[2]);
+        FORMAT(dest, (char *)xmlBufferContent(buffer), line_fold);
+        wattroff(dest->container, COLOR_PAIR(attr[0]));
+        wattroff(dest->container, attr[1]);
+        wattroff(dest->container, attr[2]);
+        xmlFree(buffer);
+        continue;
       }
       else if (STRING_IS("strong", curNode->name)) {  //  * bold
         attr[1] = A_BOLD;
@@ -136,6 +153,9 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
           attr[1] = A_UNDERLINE;
           attr[0] = blue;
         }
+        else if (STRING_IS("br", curNode->name)) {
+          context = "\n";
+        }
       }
 
       wattron(dest->container, COLOR_PAIR(attr[0]));
@@ -147,7 +167,7 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
     }
     else if (curNode->type == XML_TEXT_NODE) {
       if (STRING_IS("li", curNode->parent->name)) {
-        context = "\n\u00b7 ";
+        // context = "\n\u00b7 ";
       }
       else if (STRING_IS("h1", curNode->parent->name)) {
         context = "\n";
@@ -203,7 +223,7 @@ int view(struct buf *ob, int blocks)
   LIBXML_TEST_VERSION;
 
   //  Render result
-  doc = xmlReadMemory((char *)(ob->data), (int)(ob->size), "noname.xml", NULL, XML_PARSE_RECOVER | XML_PARSE_NOBLANKS);
+  doc = htmlReadMemory((char *)(ob->data), (int)(ob->size), "noname.xml", NULL, HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
   if (doc == NULL) {
     error("Failed to parse document\n");
     return 1;
