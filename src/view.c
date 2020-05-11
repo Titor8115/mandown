@@ -44,7 +44,7 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
 
   xmlBufferPtr buffer;
   xmlNode *curNode;
-
+  // xmlNodePtr codeblock;
   line_fold = indent;
 
   for (curNode = node; curNode != NULL; curNode = curNode->next) {
@@ -53,7 +53,7 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
     attr[1] = A_NORMAL;
     attr[2] = A_NORMAL;
     if (curNode->type == XML_ELEMENT_NODE) {
-      if (STRING_IS("body", curNode->parent->name)) {
+      if (STRING_IS("article", curNode->parent->name)) {
         wattrset(dest->container, 0);
         if (STRING_IS("title", curNode->name))
           line_fold = 0;
@@ -152,9 +152,6 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
           context = GET_PROP("alt", curNode);
           attr[1] = A_UNDERLINE;
           attr[0] = blue;
-        }
-        else if (STRING_IS("br", curNode->name)) {
-          context = "\n";
         }
       }
 

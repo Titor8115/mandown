@@ -109,12 +109,12 @@ int main(int argc, char **argv)
 
   /* Prepare for nodeHandler */
   ob = bufnew(OUTPUT_UNIT);
-  bufprintf(ob, "<article>\n<title >%s(7)</title>", file);
+  bufprintf(ob, "<body><article>\n<title >%s(7)</title>", file);
   sdblender_renderer(&callbacks, &options, 0);
   markdown = sd_markdown_new(0, 16, &callbacks, &options);
   sd_markdown_render(ob, ib->data, ib->size, markdown);
   sd_markdown_free(markdown);
-  bufprintf(ob, "</article>\n");
+  bufprintf(ob, "</article></body>\n");
 
   bufrelease(ib);
 
