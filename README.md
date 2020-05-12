@@ -8,6 +8,10 @@ Considering to change the name in later release.
 
 Need to lookup things from README? Or from manual page? Or perhaps just want to install something cool... (**Looking for work buddies**)
 
+## Update
+
+**Line Wrap** now reacts to terminal resize events.
+
 ## Sample
 
 ![screenshot](./screenshot.png)
