@@ -64,7 +64,7 @@ Exit: <kbd>q</kbd>
 if it compiles but doesn't run, try updating your ncurses library.
 
 ```bash
-$ apt-get install libncursesw5-dev
+$ apt-get install libncursesw5-dev libxml2-dev
 ```
 
 ## Todo
