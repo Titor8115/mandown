@@ -3,19 +3,21 @@
 // #include <libxml/parser.h>
 #include <libxml/HTMLparser.h>
 #include <libxml/HTMLtree.h>
-#include <libxml/tree.h>
+// #include <libxml/tree.h>
 #include <locale.h>
 #include <stdio.h>
 
 #include "buffer.h"
 #include "mandown.h"
 
-void formatHandler(struct parts *dest, xmlChar *content, int line_fold)
+void formatHandler(partsPtr dest, xmlChar *content, int line_fold)
 {
   int i, length;
 
   length = xmlStrlen(content);
   for (i = 0; i < length; i++) {
+    if (dest->resizing) return;
+
     getyx(dest->container, dest->curY, dest->curX);
 
     if (i && i + 1 == length && content[i] == '\n')
@@ -36,7 +38,7 @@ void formatHandler(struct parts *dest, xmlChar *content, int line_fold)
   }
 }
 
-void nodeHandler(xmlNode *node, struct parts *dest, int indent)
+void nodeHandler(xmlNode *node, partsPtr dest, int indent)
 {
   char *context;
   int line_fold;
@@ -44,49 +46,52 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
 
   xmlBufferPtr buffer;
   xmlNode *curNode;
-  // xmlNodePtr codeblock;
-  line_fold = indent;
 
+  if (dest->resizing) return;
+
+  line_fold = indent;
   for (curNode = node; curNode != NULL; curNode = curNode->next) {
+    if (dest->resizing) return;
+
     context = NULL;
-    attr[0] = standard;
+    attr[0] = Black;
     attr[1] = A_NORMAL;
     attr[2] = A_NORMAL;
     if (curNode->type == XML_ELEMENT_NODE) {
-      if (STRING_IS("article", curNode->parent->name)) {
+      if (IS_STRING("article", curNode->parent->name)) {
         wattrset(dest->container, 0);
-        if (STRING_IS("title", curNode->name))
+        if (IS_STRING("title", curNode->name))
           line_fold = 0;
         else {
           line_fold = FOLDS;
           FORMAT(dest, "\n", line_fold);
         }
       }
-      else if (STRING_IS("li", curNode->parent->name)) {
-        if (!STRING_IS("ul", curNode->name)) {
-          // FORMAT(dest, "\n", line_fold);
-          // if (line_fold >= indent)
-          // context = "\u00b7 ";
-        }
-      }
+      // else if (IS_STRING("li", curNode->parent->name)) {
+      //   if (!IS_STRING("ul", curNode->name)) {
+      //     // FORMAT(dest, "\n", line_fold);
+      //     // if (line_fold >= indent)
+      //     // context = "\u00b7 ";
+      //   }
+      // }
 
-      if (STRING_IS("ul", curNode->name) || STRING_IS("ul", curNode->name)) {  // * unordered list
+      if (IS_STRING("ul", curNode->name) || IS_STRING("ul", curNode->name)) {  // * unordered list
         line_fold += 3;
       }
-      else if (STRING_IS("p", curNode->name)) {  // * paragraph
+      else if (IS_STRING("p", curNode->name)) {  // * paragraph
         // wattrset(dest->container, 0);
       }
-      else if (STRING_IS("li", curNode->name)) {  //  * list item
+      else if (IS_STRING("li", curNode->name)) {  //  * list item
         context = "\n\u00b7 ";
 
         // line_fold = indent;
       }
-      else if (STRING_IS("code", curNode->name)) {  //  * codeblock
+      else if (IS_STRING("code", curNode->name)) {  //  * codeblock
         buffer = xmlBufferCreate();
         xmlNodeDump(buffer, curNode->children->doc, curNode->children, 0, 0);
         attr[1] = A_CHARTEXT;
-        attr[0] = yellow;
-        line_fold = indent + 3;
+        attr[0] = Yellow;
+        // line_fold = indent + 3;
         wattron(dest->container, COLOR_PAIR(attr[0]));
         wattron(dest->container, attr[1]);
         wattron(dest->container, attr[2]);
@@ -97,61 +102,61 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
         xmlFree(buffer);
         continue;
       }
-      else if (STRING_IS("strong", curNode->name)) {  //  * bold
+      else if (IS_STRING("strong", curNode->name)) {  //  * bold
         attr[1] = A_BOLD;
       }
-      else if (STRING_IS("em", curNode->name)) {  //  * italic
+      else if (IS_STRING("em", curNode->name)) {  //  * italic
         attr[1] = A_ITALIC;
       }
-      else if (STRING_IS("u", curNode->name) || STRING_IS("ins", curNode->name)) {  // * underline
+      else if (IS_STRING("u", curNode->name) || IS_STRING("ins", curNode->name)) {  // * underline
         attr[1] = A_UNDERLINE;
       }
-      else if (STRING_IS("s", curNode->name) || STRING_IS("del", curNode->name)) {  // * strikethrough
+      else if (IS_STRING("s", curNode->name) || IS_STRING("del", curNode->name)) {  // * strikethrough
         attr[1] = A_INVIS;
         attr[2] = A_REVERSE;
       }
-      else if (STRING_IS("kbd", curNode->name)) {  //  * keyboard input
+      else if (IS_STRING("kbd", curNode->name)) {  //  * keyboard input
         attr[1] = A_DIM;
       }
-      else if (STRING_IS("a", curNode->name)) {  //  * hyperlink
+      else if (IS_STRING("a", curNode->name)) {  //  * hyperlink
         attr[1] = A_UNDERLINE;
-        attr[0] = blue;
+        attr[0] = Blue;
       }
-      else if (STRING_IS("h1", curNode->name)) {  //  * header 1 as .SH "NAME"
+      else if (IS_STRING("h1", curNode->name)) {  //  * header 1 as .SH "NAME"
         line_fold = 0;
         context = "\nNAME";
         attr[1] = A_BOLD;
       }
-      else if (STRING_IS("h2", curNode->name)) {  //  * header 2 for other .SH
+      else if (IS_STRING("h2", curNode->name)) {  //  * header 2 for other .SH
         line_fold = 0;
         context = "\n";
         attr[1] = A_BOLD;
       }
-      else if (STRING_IS("h3", curNode->name)) {  //  * header 3 for .SS
+      else if (IS_STRING("h3", curNode->name)) {  //  * header 3 for .SS
         line_fold = 0;
         context = "\n   ";
         attr[1] = A_BOLD;
       }
-      else if (STRING_IS("h4", curNode->name)) {  //  * header 4 as Sub of .SS
+      else if (IS_STRING("h4", curNode->name)) {  //  * header 4 as Sub of .SS
         line_fold = 4;
         context = "\nSUB: ";
         attr[1] = A_BOLD;
       }
-      else if (STRING_IS("h5", curNode->name)) {  //  * header 5 as Points in Sub
+      else if (IS_STRING("h5", curNode->name)) {  //  * header 5 as Points in Sub
         line_fold = 5;
         context = "\nPT: ";
         attr[1] = A_BOLD;
       }
-      else if (STRING_IS("h6", curNode->name)) {  // * header 6 as Sub of Points
+      else if (IS_STRING("h6", curNode->name)) {  // * header 6 as Sub of Points
         line_fold = 6;
         context = "\nPT SUB: ";
         attr[1] = A_BOLD;
       }
       else {
-        if (STRING_IS("img", curNode->name)) {
+        if (IS_STRING("img", curNode->name)) {
           context = GET_PROP("alt", curNode);
           attr[1] = A_UNDERLINE;
-          attr[0] = blue;
+          attr[0] = Blue;
         }
       }
 
@@ -163,10 +168,10 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
       }
     }
     else if (curNode->type == XML_TEXT_NODE) {
-      if (STRING_IS("li", curNode->parent->name)) {
+      if (IS_STRING("li", curNode->parent->name)) {
         // context = "\n\u00b7 ";
       }
-      else if (STRING_IS("h1", curNode->parent->name)) {
+      else if (IS_STRING("h1", curNode->parent->name)) {
         context = "\n";
         line_fold = FOLDS;
       }
@@ -174,7 +179,7 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
       if (context != NULL) {
         FORMAT(dest, context, line_fold);
       }
-      if (!STRING_IS("\n", curNode->content)) {
+      if (!IS_STRING("\n", curNode->content)) {
         FORMAT(dest, curNode->content, line_fold);
       }
       // wattrset(dest->container, A_NORMAL);
@@ -186,23 +191,24 @@ void nodeHandler(xmlNode *node, struct parts *dest, int indent)
   }
 }
 
-struct parts *
-partsNew()
+partsPtr
+partsNew(int height, int width, int curY, int curX)
 {
-  struct parts *ret;
-  ret = malloc(sizeof(struct parts));
+  partsPtr ret;
+  ret = malloc(sizeof(parts));
 
   if (ret) {
     ret->container = NULL;
-    ret->height = 0;
-    ret->width = 0;
-    ret->curY = 0;
-    ret->curX = 0;
+    ret->height = height;
+    ret->width = width;
+    ret->curY = curY;
+    ret->curX = curX;
+    ret->resizing = false;
   }
   return ret;
 }
 
-void partsFree(struct parts *part)
+void partsFree(partsPtr part)
 {
   if (!part)
     return;
@@ -212,15 +218,18 @@ void partsFree(struct parts *part)
 
 int view(struct buf *ob, int blocks)
 {
-  int ymax, xmax, key, curLine, pageHeight;
-  struct parts *content, *info;
+  int ymax, xmax, key, curLine;
+
+  partsPtr page, status;
   xmlDoc *doc;
   xmlNode *rootNode;
 
   LIBXML_TEST_VERSION;
 
   //  Render result
-  doc = htmlReadMemory((char *)(ob->data), (int)(ob->size), "noname.xml", NULL, HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
+  doc = htmlReadMemory((char *)(ob->data), (int)(ob->size),
+                       "input markdown", NULL,
+                       HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
   if (doc == NULL) {
     error("Failed to parse document\n");
     return 1;
@@ -236,11 +245,11 @@ int view(struct buf *ob, int blocks)
   //  Initialize ncurses
   setlocale(LC_ALL, "");
   initscr();
-  cbreak(); /* make getch() process one char at a time */
+  // cbreak(); /* make getch() process one char at a time */
+  halfdelay(1);
   noecho(); /* disable output of keyboard typing */
 
-  // keypad(stdscr, TRUE); /* enable arrow keys */
-  // curs_set(0); /* disable cursor */
+  curs_set(0); /* disable cursor */
 
   //  Initialize colors if terminal support
   if (has_colors()) {
@@ -249,109 +258,102 @@ int view(struct buf *ob, int blocks)
 
     //  todo: 256 color mode
     if (COLORS == 256) {
-      init_pair(standard, -1, -1);
-      init_pair(red, COLOR_RED, -1);
-      init_pair(green, COLOR_GREEN, -1);
-      init_pair(yellow, COLOR_YELLOW, -1);
-      init_pair(blue, COLOR_BLUE, -1);
-      init_pair(magenta, COLOR_MAGENTA, -1);
-      init_pair(cyan, COLOR_CYAN, -1);
-      init_pair(white, COLOR_WHITE, -1);
+      init_pair(Black, -1, -1);
+      init_pair(Red, COLOR_RED, -1);
+      init_pair(Green, COLOR_GREEN, -1);
+      init_pair(Yellow, COLOR_YELLOW, -1);
+      init_pair(Blue, COLOR_BLUE, -1);
+      init_pair(Magenta, COLOR_MAGENTA, -1);
+      init_pair(Cyan, COLOR_CYAN, -1);
+      init_pair(White, COLOR_WHITE, -1);
     }
     //  8 color mode
     else {
-      init_pair(standard, -1, -1);
-      init_pair(red, COLOR_RED, -1);
-      init_pair(green, COLOR_GREEN, -1);
-      init_pair(yellow, COLOR_YELLOW, -1);
-      init_pair(blue, COLOR_BLUE, -1);
-      init_pair(magenta, COLOR_MAGENTA, -1);
-      init_pair(cyan, COLOR_CYAN, -1);
-      init_pair(white, COLOR_WHITE, -1);
+      init_pair(Black, -1, -1);
+      init_pair(Red, COLOR_RED, -1);
+      init_pair(Green, COLOR_GREEN, -1);
+      init_pair(Yellow, COLOR_YELLOW, -1);
+      init_pair(Blue, COLOR_BLUE, -1);
+      init_pair(Magenta, COLOR_MAGENTA, -1);
+      init_pair(Cyan, COLOR_CYAN, -1);
+      init_pair(White, COLOR_WHITE, -1);
     }
   }
-
-  getmaxyx(stdscr, ymax, xmax);
-  pageHeight = ymax - 1;
+  GET_SCREEN_SIZE(ymax, xmax);
   curLine = 0;
+  page = partsNew(blocks, xmax, 0, 0); /* file page */
+  page->container = newpad(page->height, page->width);
+  keypad(page->container, TRUE); /* enable arrow keys */
 
-  content = partsNew(); /* file content */
-  info = partsNew();    /* info content at bottom */
+  status = partsNew(1, xmax, ymax, 0); /* status page at bottom */
+  status->container = newwin(status->height, status->width, status->curY, status->curX);
+  scrollok(status->container, TRUE); /* newline implement as auto refresh */
 
-  content->height = blocks;
-  content->width = xmax;
-  content->container = newpad(content->height, content->width);
-  keypad(content->container, TRUE); /* enable arrow keys */
+  refresh();
+  wattrset(status->container, A_REVERSE);
+  nodeHandler(rootNode, page, FOLDS);
 
-  info->height = 1;
-  info->width = xmax;
-  info->container = newwin(info->height, info->width, pageHeight, 0);
-  scrollok(info->container, TRUE); /* newline implement as auto refresh */
-
-  nodeHandler(rootNode, content, FOLDS);
-  xmlFreeDoc(doc);
-
-  prefresh(content->container, curLine, 0, 0, 0, pageHeight, xmax);
-
-  //  Render initial all content sections
-  wattrset(info->container, A_REVERSE);
-  if (pageHeight >= content->height) {
-    wprintw(info->container, "\n Markdown page (ALL) (press q to quit)");
-  }
-  else {
-    wprintw(info->container, "\n Markdown page (TOP) (press q to quit)");
-  }
-
-  wrefresh(info->container);
-
-  while ((key = wgetch(content->container)) != 'q') {
+  while ((key = wgetch(page->container)) != 'q') {
     switch (key) {
+      case 'j':
+      case ENTER:
+      case KEY_DOWN:
+        if (curLine + ymax < page->height)
+          curLine++;
+        break;
+      case KEY_RESIZE:
+        halfdelay(2);
+        page->resizing = true;
+        GET_SCREEN_SIZE(ymax, xmax);
+        break;
       case 'k':
       case KEY_BACKSPACE:
       case KEY_UP:
         if (curLine > 0)
           curLine--;
         break;
-      case 'j':
-      case ENTER:
-      case KEY_DOWN:
-        if (curLine + pageHeight < content->height)
-          curLine++;
+      case -1:
+        cbreak();
+        page->resizing = false;
+        GET_SCREEN_SIZE(ymax, xmax);
+        if (page->width != xmax) {
+          page->width = (page->width > xmax) ? page->width + page->width / 5 : page->width - page->width / 5;
+          werase(page->container);
+          wresize(page->container, page->height, xmax);
+          nodeHandler(rootNode, page, FOLDS);
+        }
+        if (status->curY != ymax)
+          mvwin(status->container, ymax, 0);
         break;
       default:
+        page->resizing = false;
         break;
     }
-    prefresh(content->container, curLine, 0, 0, 0, pageHeight, xmax);
-    if (pageHeight >= content->height) {
-      wprintw(info->container, "\n Markdown page (ALL) (press q to quit)");
+    if (!page->resizing) {
+      prefresh(page->container, curLine, 0, 0, 0, ymax, xmax);
+    }
+
+    if (ymax >= page->height) {
+      wprintw(status->container, "\n Markdown page (ALL) (press q to quit)");
     }
     else if (curLine <= 0) {
-      wprintw(info->container, "\n Markdown page (TOP) (press q to quit)");
+      wprintw(status->container, "\n Markdown page (TOP) (press q to quit)");
     }
-    else if (curLine + pageHeight < content->height)
-      wprintw(info->container,
+    else if (curLine + ymax < page->height)
+      wprintw(status->container,
               "\n Markdown page (%d%%) (press q to quit)",
-              ((curLine + pageHeight) * 100) / content->height);
+              ((curLine + ymax) * 100) / page->height);
     else
-      wprintw(info->container, "\n Markdown page (END) (press q to quit)");
-    wrefresh(info->container);
+      wprintw(status->container, "\n Markdown page (END) (press q to quit)");
+    wrefresh(status->container);
   }
 
   //  Clean up
-  partsFree(content);
-  partsFree(info);
+  xmlFreeDoc(doc);
+  partsFree(page);
+  partsFree(status);
   endwin();
   return 0;
 }
-
-// int newlines = 0, Choice = 0, Key = 0;
-// for (int i = 0; i < ob->size; i++)
-//     if (ob->data[i] == '\n') newlines++;
-// int PadHeight = ((ob->size - newlines) / Width + newlines + 1);
-// mypad = newpad(PadHeight, Width);
-// keypad(content->container, true);
-// waddwstr(content->container, c_str());
-// refresh();
-// int curLine = 0;
 
 /* vim: set filetype=c: */
