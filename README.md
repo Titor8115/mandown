@@ -83,8 +83,8 @@ Exit: <kbd>q</kbd>
 
 ## Todo
 
-- Piping capability
-- Line fold/wrap on white space
-- Optimized resizing
-- Table and contents rendering
-- Makefile makeover
+- [ ] Piping capability
+- [ ] Line fold/wrap on white space
+- [ ] Optimized resizing
+- [ ] Table and contents rendering
+- [ ] Makefile makeover
