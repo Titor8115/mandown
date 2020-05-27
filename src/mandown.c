@@ -154,7 +154,7 @@ int main(int argc, char **argv)
   bufprintf(ob, "</article>\n");
 
   bufrelease(ib);
-  fprintf(stdout, (char *)ob->data);
+  // fprintf(stdout, (char *)ob->data);
 
   if (setting->mode) {  // * output to file
     if (!(fp_out = fopen(out, "w"))) {
