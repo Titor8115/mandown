@@ -34,21 +34,41 @@ Can you see this <s>strikethrough</s> or this <del>strikethrough</del>?
 
 `This is a code block`
 
-## Install
+## Installation
 
 Current version is incomplete. However, it should work on simpler Markdown documents.
 
 The Ncurses UI is still being developed for different HTML tags.
 
-```bash
+```shell
 $ git clone https://github.com/Titor8115/mandown.git
 $ cd mandown
 $ make
 ```
 
+## Library requirements
+
+Mandown requires `libncurses(w)` and `libxml2` as compile-time dependencies.
+
+Make sure you have them installed before compiling.
+
+### Homebrew
+```shell
+$ brew install ncurses
+$ brew install libxml2-dev
+```
+
+### Debian
+```shell
+$ apt-get install libncursesw5-dev
+$ apt-get install  libxml2-dev
+```
+
+If headers are still missing or any other issues. Feel free to create an issue.
+
 ### Usage
 
-```bash
+```shell
 $ cd mandown
 $ ./mandown README.md
 ```
@@ -61,24 +81,10 @@ Scroll Down: <kbd>↓</kbd>, <kbd>j</kbd>, <kbd>ENTER</kbd>
 
 Exit: <kbd>q</kbd>
 
-if it compiles but doesn't run, try updating your ncurses library.
-
-```bash
-$ apt-get install libncursesw5-dev
-```
-
 ## Todo
 
-- Format
-
-  - [x] markdown
-  - [ ] troff
-
-- Command-line
-
-  - [x] test version
-  - [ ] document pathfinder
-
-- Ncurses
-  - [x] keyboard control
-  - [x] coloring
+- [ ] Piping capability
+- [ ] Line fold/wrap on white space
+- [ ] Optimized resizing
+- [ ] Table and contents rendering
+- [ ] Makefile makeover
