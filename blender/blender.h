@@ -15,8 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef UPSKIRT_blender_H
-#define UPSKIRT_blender_H
+#ifndef UPSKIRT_BLENDER_H
+#define UPSKIRT_BLENDER_H
 
 #include <stdlib.h>
 
@@ -68,8 +68,7 @@ sdblender_renderer(struct sd_callbacks *callbacks, struct blender_renderopt *opt
 extern void
 sdblender_toc_renderer(struct sd_callbacks *callbacks, struct blender_renderopt *options_ptr);
 
-extern int
-    blocks;
+extern int blocks;
 
 #ifdef __cplusplus
 }

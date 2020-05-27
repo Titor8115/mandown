@@ -200,22 +200,3 @@ void bufslurp(struct buf *buf, size_t len) {
     buf->size -= len;
     memmove(buf->data, buf->data + len, buf->size);
 }
-
-// void waddcontent(const void *data, size_t len) {
-//     // if (len <= (size_t)(width)) {
-//     //     height += 1;
-//     // } else {
-//     //     height += len / (size_t)(width);
-//     //     if ((len % (size_t)(width)) != 0) {
-//     //         height += 1;
-//     //     }
-//     //     wresize(content, height, width);
-//     // }
-//     wprintw(content, (char *)(data));
-// }
-
-// void waddline() {
-//     height += 1;
-//     wresize(content, height, width);
-//     waddch(content, '\n');
-// }
