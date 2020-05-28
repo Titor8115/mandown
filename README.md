@@ -10,7 +10,7 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 ## Update
 
-**Line Wrap** now reacts to terminal resize events.
+**Line Wrap** won't break words apart. **Bug:** resizing seems to break the rendering... Fix is on the way.
 
 ## Sample
 
