@@ -25,10 +25,18 @@ DEPDIR=depends
 
 # "Machine-dependant" options
 #MFLAGS=-fPIC
+UNAME_S := $(shell uname -s 2>/dev/null || echo not)
+CURSES = ncursesw
+OSFLAGS = -Wl,--copy-dt-needed-entries
 
-CFLAGS=-c -g -O3 -fPIC -Wall -Wsign-compare -Iparser -Iblender -Iinclude -I/usr/include/libxml2
-LDFLAGS=-g -O3 -Wl,--copy-dt-needed-entries -lncursesw -lxml2 -Wall -Werror
-CC=gcc
+ifeq ($(UNAME_S),Darwin)
+	CURSES := ncurses
+	OSFLAGS :=
+endif
+
+CFLAGS = -c -g -O3 -Wall -Wsign-compare -Iparser -Iblender -Iinclude -I/usr/include/libxml2
+LDFLAGS = -g -O3 $(OSFLAGS) -l$(CURSES) -lxml2 -Wall -Werror
+CC = gcc
 
 MANDOWN_SRC=\
 	src/mandown.o \
@@ -64,12 +72,10 @@ clean:
 	rm -rf $(DEPDIR)
 
 # dependencies
-
 include $(wildcard $(DEPDIR)/*.d)
 
 
 # generic object compilations
-
 %.o:	src/%.c parser/%.c blender/%.c
 	@mkdir -p $(DEPDIR)
 	@$(CC) -MM $< > $(DEPDIR)/$*.d
