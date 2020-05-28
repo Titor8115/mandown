@@ -40,6 +40,9 @@ extern "C" {
 #endif
 
 #define ENTER 10
+#ifndef A_ITALIC
+#define A_ITALIC NCURSES_BITS(1U,23)
+#endif
 
 typedef struct contents Contents;
 struct contents {
