@@ -89,4 +89,4 @@ Exit: <kbd>q</kbd>
 - [ ] Line fold/wrap on white space
 - [ ] Optimized resizing
 - [ ] Table and contents rendering
-- [ ] Makefile makeover
+- [x] Makefile makeover
