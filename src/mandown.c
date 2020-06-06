@@ -13,22 +13,22 @@
 #include "markdown.h"
 #include "view.h"
 
-void sd_message(char *contents)
+void sd_message(char *output)
 {
-  fprintf(stdout, "%s%snote: %s%s\n\r", "\033[1m", "\033[36m", "\033[0m",
-          contents);
+  fprintf(stdout, "\r%s%snote: %s%s\n", "\033[1m", "\033[36m", "\033[0m",
+          output);
 }
 
-void sd_error(char *contents)
+void sd_error(char *output)
 {
-  fprintf(stderr, "%s%serror: %s%s\n\r", "\033[1m", "\033[31m", "\033[0m",
-          contents);
+  fprintf(stderr, "\r%s%serror: %s%s\n", "\033[1m", "\033[31m", "\033[0m",
+          output);
 }
 
-void sd_warning(char *contents)
+void sd_warning(char *output)
 {
-  fprintf(stderr, "%s%swarning: %s%s\n\r", "\033[1m", "\033[33m", "\033[0m",
-          contents);
+  fprintf(stderr, "\r%s%swarning: %s%s\n", "\033[1m", "\033[33m", "\033[0m",
+          output);
 }
 
 void usage()
@@ -53,23 +53,23 @@ void usage()
 }
 
 Config *
-configNew()
+config_new()
 {
   Config *ret;
   ret = malloc(sizeof *ret);
 
   if (ret) {
     ret->mode = PAGE_MODE;
-    ret->line_fold = LINE_FOLD;
+    ret->lineFold = LINE_FOLD;
   }
   return ret;
 }
 
-void configFree(Config *setting)
+void config_free(Config *configure)
 {
-  if (!setting)
+  if (!configure)
     return;
-  free(setting);
+  free(configure);
 }
 
 int main(int argc, char **argv)
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
   char *                   out = NULL;
   FILE *                   fp_in;
   FILE *                   fp_out;
-  Config *                 setting;
+  Config *                 configure;
   struct buf *             ib;
   struct buf *             ob;
   struct sd_callbacks      callbacks;
@@ -94,46 +94,44 @@ int main(int argc, char **argv)
     usage();
     exit(EXIT_FAILURE);
   }
-  else {
-    setting = configNew();
-    while ((opt = getopt(argc, argv, ":f:ho:")) != -1) {
-      switch (opt) {
-        case 'f':
-          in = optarg;
-          break;
-        case 'h':
-          usage();
-          exit(EXIT_SUCCESS);
-          break;
-        case 'o':
-          out = optarg;
-          setting->mode = FILE_MODE;
-          break;
-        case ':':
-          if (optopt == 'f')
-            sd_error("No file is given");
-          if (optopt == 'o')
-            sd_error("No path is given for output");
-          exit(EXIT_FAILURE);
-          break;
-        default:
-          break;
-      }
-    }
-    for (int i = optind; i < argc; i++) {
-      in = argv[optind];
-    }
-  }
 
-  if (in == NULL) {
-    exit(EXIT_FAILURE);
+  configure = config_new();
+
+  while ((opt = getopt(argc, argv, ":f:ho:")) != -1) {
+    switch (opt) {
+      case 'f':
+        in = optarg;
+        break;
+      case 'h':
+        usage();
+        exit(EXIT_SUCCESS);
+        break;
+      case 'o':
+        out = optarg;
+        configure->mode = FILE_MODE;
+        break;
+      case ':':
+        if (optopt == 'f')
+          sderror("No file is given");
+        if (optopt == 'o')
+          sderror("No path is given for output");
+        exit(EXIT_FAILURE);
+        break;
+      default:
+        break;
+    }
   }
+  for (int i = optind; i < argc; i++)
+    in = argv[optind];
+
+  if (!in)
+    return EXIT_FAILURE;
 
   /* Reading file */
   fp_in = fopen(in, "r");
   if (!fp_in) {
-    sd_error(strerror(errno));
-    exit(EXIT_FAILURE);
+    sderror(strerror(errno));
+    return EXIT_FAILURE;
   }
 
   ib = bufnew(READ_UNIT);
@@ -154,25 +152,22 @@ int main(int argc, char **argv)
   bufprintf(ob, "</article>\n");
 
   bufrelease(ib);
-  // fprintf(stdout, (char *)ob->data);
 
-  if (setting->mode) {  // * output to file
+  if (configure->mode) {  // * output to file
     if (!(fp_out = fopen(out, "w"))) {
-      sd_error(strerror(errno));
-      ret = EXIT_FAILURE;
+      sderror(strerror(errno));
+      return EXIT_FAILURE;
     }
-    else {
+    else
       fwrite((void *)ob->data, ob->size, 0, fp_out);
-      ret = EXIT_SUCCESS;
-    }
   }
   else if (!isatty(STDOUT_FILENO)) {  // * output to piped pager
-    setting->mode = FILE_MODE;
+    configure->mode = FILE_MODE;
 
     pid = pipe(pfd);
     if (pid < 0) {
       perror("pipe failed");
-      ret = EXIT_FAILURE;
+      return EXIT_FAILURE;
     }
     else if (pid == 0) {
       close(pfd[0]);
@@ -183,11 +178,11 @@ int main(int argc, char **argv)
     }
   }
   else {  // * output to mandown pager
-    ret = view(setting, ob, blocks);
+    ret = view(configure, ob, blocks);
   }
 
   /* Clean up */
   bufrelease(ob);
-
+  config_free(configure);
   return ret;
 }

@@ -1,8 +1,8 @@
-# mandown
+# mandown - mdn
 
 A man-page inspired Markdown pager written in C.
 
-Considering to change the name in later release.
+**Name change:** executable's name changed to `mdn`
 
 ## What is it
 
@@ -24,7 +24,7 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
       - It is 🔥
         - Me right now 💀
 
-This is <ins>underline</ins>
+This is <ins>underline</ins> sdadssa
 
 This is <em>italic</em>
 
@@ -72,7 +72,7 @@ If headers are still missing or any other issues. Feel free to create an issue.
 
 ```shell
 $ cd mandown
-$ ./mandown README.md
+$ ./mdn README.md
 ```
 
 Mouse wheel scrolling is supported! (if your terminal emulator allows)
@@ -87,6 +87,6 @@ Exit: <kbd>q</kbd>
 
 - [ ] Piping capability
 - [x] Line fold/wrap on white space
-- [ ] Optimized resizing
+- [x] Optimized resizing
 - [ ] Table and contents rendering
 - [ ] Makefile makeover

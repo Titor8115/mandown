@@ -8,11 +8,11 @@
 
 #include "buffer.h"
 
-struct parts *
-partsNew(int height, int width, int curY, int curX)
+Part *
+part_new(int height, int width, int curY, int curX)
 {
-  struct parts *ret;
-  ret = malloc(sizeof *ret);
+  Part *ret;
+  ret = malloc(sizeof(Part));
 
   if (ret) {
     ret->ctnr = NULL;
@@ -20,364 +20,345 @@ partsNew(int height, int width, int curY, int curX)
     ret->width = width;
     ret->curY = curY;
     ret->curX = curX;
-    ret->resize_key = FALSE;
   }
   return ret;
 }
 
-void partsFree(struct parts *part)
+void part_free(Part *part)
 {
   if (!part)
     return;
-  if (part->ctnr != NULL)
-    delwin(part->ctnr);
+  delwin(part->ctnr);
   free(part);
 }
 
-Contents *
-contentsNew(int fold)
+Content *
+content_new()
 {
-  Contents *ret;
-  ret = malloc(sizeof *ret);
+  Content *ret;
+  ret = malloc(sizeof(Content));
 
   if (ret) {
-    ret->string = 0;
-    ret->length = 0;
+    ret->string = NULL;
+    ret->next = NULL;
+    ret->fold = 0;
+    ret->newline = 0;
     ret->color = Standard;
     ret->firAttr = A_NORMAL;
     ret->secAttr = A_NORMAL;
-    ret->fold = fold;
-    ret->newline = 0;
-    ret->resetAttr = FALSE;
+    ret->togAttr = FALSE;
+    ret->formated = FALSE;
   }
   return ret;
 }
 
-// void contentsUpdate(Contents *content, )
-// {
-//   if (!content)
-//     return;
+void content_append(Content **head, Content *content)
+{
+  Content *p = *head;
+  if (*head == NULL) {
+    *head = content;
+    return;
+  }
 
-//   content->string = NULL;
-//   content->length = 0;
-//   content->color = Standard;
-//   content->firAttr = content->secAttr = A_NORMAL;
-//   // content->fold = fold;
-//   content->newline = 0;
-//   content->resetAttr = FALSE;
-// }
+  while (p->next != NULL)
+    p = p->next;
+  p->next = content;
+}
 
-void contentsReset(Contents *content)
+void content_reset(Content *content)
 {
   if (!content)
     return;
-
   content->string = NULL;
-  content->length = 0;
+  content->next = NULL;
+  content->fold = 0;
+  content->newline = 0;
   content->color = Standard;
   content->firAttr = A_NORMAL;
   content->secAttr = A_NORMAL;
-  // content->fold = fold;
-  content->newline = 0;
-  content->resetAttr = FALSE;
+  content->togAttr = FALSE;
+  content->formated = FALSE;
 }
 
-void contentsFree(Contents *content)
+void content_free(Content *content)
 {
   if (!content)
     return;
+  bufrelease(content->string);
+  content_free(content->next);
+
   free(content);
 }
 
-void tog_attr(WINDOW *dest, bool reset, int color, int firAttr, int secAttr, bool toggle)
+void toggle_attr(WINDOW *dest, bool toggle, int color, int firAttr, int secAttr)
 {
-  if (reset)
-    wattrset(dest, 0);
-
   if (toggle) {
-    wattron(dest, COLOR_PAIR(color));
-    wattron(dest, firAttr);
-    wattron(dest, secAttr);
+    if (color) wattron(dest, COLOR_PAIR(color));
+    if (firAttr) wattron(dest, firAttr);
+    if (secAttr) wattron(dest, secAttr);
   }
   else {
-    wattroff(dest, COLOR_PAIR(color));
-    wattroff(dest, firAttr);
-    wattroff(dest, secAttr);
+    if (color) wattroff(dest, COLOR_PAIR(color));
+    if (firAttr) wattroff(dest, firAttr);
+    if (secAttr) wattroff(dest, secAttr);
   }
 }
-void arrange_content(struct parts *dest, Contents *content)
+
+void render_content(Part *dest, Content *ib)
 {
-  bool newline = FALSE;
-  int  length;
-  int  i = 0;
-  // int        width = dest->width - 1;
-  const char toc[] = " ";
-  char *     line = NULL;
+  int      i;
+  int      len;
+  char     toc[3] = {' ', '\n', 0};
+  char *   tocptr = toc;
+  char *   out;
+  char *   string = NULL;
+  Content *ob;
 
-  for (i; i < content->newline; i++)
-    waddch(dest->ctnr, '\n');
-
-  if (content->string == NULL)
-    return;
-  if (dest->resize_key)
-    return;
-
-  // if (content->length + content->fold >= dest->width - 1) {
-  //   waddstr(dest->ctnr, (char *)content->string);
-  //   return;
-  // }
-
-  line = strtok((char *)content->string, toc);
-
-  while (line != NULL) {
-    if (dest->resize_key)
-      break;
-
-    length = strlen(line);
-    getyx(dest->ctnr, dest->curY, dest->curX);
-
-    if (dest->resize_key)
-      break;
-    if (dest->curY >= dest->height - 1) {
-      dest->height += 1;
-      wresize(dest->ctnr, dest->height, dest->width);
+  for (ob = ib; ob != NULL; ob = ob->next) {
+    for (i = 0; i < ob->newline; i++) {
+      wprintw(dest->ctnr, "\n");
     }
-    if (dest->curX + length >= dest->width - 1) {
-      dest->height += 1;
-      wresize(dest->ctnr, dest->height, dest->width);
-      waddstr(dest->ctnr, "\n");
+    if (!(ob->string)) {
+      toggle_attr(dest->ctnr, FALSE, ob->color, ob->firAttr, ob->secAttr);
+      continue;
     }
-    getyx(dest->ctnr, dest->curY, dest->curX);
+    else if (ob->togAttr)
+      toggle_attr(dest->ctnr, TRUE, ob->color, ob->firAttr, ob->secAttr);
 
-    if (dest->curX == 0) {
-      tog_attr(dest->ctnr, FALSE, content->color, content->firAttr, content->secAttr, FALSE);
-      wprintw(dest->ctnr, "%*s", content->fold, "");
-      tog_attr(dest->ctnr, FALSE, content->color, content->firAttr, content->secAttr, TRUE);
+    if (ob->string->size) {
+      string = calloc(ob->string->size + 1, sizeof(char));
+      strncpy(string, (char *)ob->string->data, ob->string->size);
+    }
+    else
+      continue;
+
+    if (ob->formated) {
+      tocptr[0] = '\n';
+      tocptr[1] = '\0';
+    }
+    else {
+      tocptr[0] = ' ';
+      tocptr[1] = '\n';
     }
 
-    waddstr(dest->ctnr, line);
-    waddch(dest->ctnr, ' ');
+    out = strtok(string, toc);
+    while (out != NULL) {
+      len = strlen(out);
 
-    line = strtok(NULL, toc);
+      // * do height adjustment, and line-fold prefix
+      getyx(dest->ctnr, dest->curY, dest->curX);
+      if (dest->curY > dest->height - 2) {
+        dest->height += 1;
+        wresize(dest->ctnr, dest->height, dest->width);
+      }
+
+      if (dest->curX == 0) {
+        dest->curX = ob->fold;
+        toggle_attr(dest->ctnr, FALSE, ob->color, ob->firAttr, ob->secAttr);
+        wprintw(dest->ctnr, "%*s", ob->fold, "");
+        toggle_attr(dest->ctnr, TRUE, ob->color, ob->firAttr, ob->secAttr);
+      }
+
+      // * do printing
+      if (dest->curX + len > dest->width - 2) {
+        dest->height += 2;
+        wresize(dest->ctnr, dest->height, dest->width);
+        toggle_attr(dest->ctnr, FALSE, ob->color, ob->firAttr, ob->secAttr);
+        wprintw(dest->ctnr, "\n%*s", ob->fold, "");
+        toggle_attr(dest->ctnr, TRUE, ob->color, ob->firAttr, ob->secAttr);
+      }
+      wprintw(dest->ctnr, out);
+      toggle_attr(dest->ctnr, FALSE, ob->color, ob->firAttr, ob->secAttr);
+      waddch(dest->ctnr, tocptr[0]);
+      toggle_attr(dest->ctnr, TRUE, ob->color, ob->firAttr, ob->secAttr);
+      out = strtok(NULL, toc);
+    }
+    if (string)
+      free(string);
   }
-  return;
-  // length = xmlStrlen(content);
-  // for (i = 0; i < length; i++) {
-  //   if (dest->resize_key) return;
-
-  //   getyx(dest->ctnr, dest->curY, dest->curX);
-
-  //   if (i && i + 1 == length && content[i] == '\n')
-  //     break;
-
-  //   if ((dest->curX >= dest->width - 1) || content[i] == '\n') {
-  //     if (dest->curY >= dest->height - 1) {
-  //       dest->height += 1;
-  //       wresize(dest->ctnr, dest->height, dest->width);
-  //     }
-  //   }
-  //   else if (dest->curX == 0) {
-  //     wattron(dest->ctnr, A_INVIS);
-  //     wprintw(dest->ctnr, "%*s", line_fold, "");
-  //     wattroff(dest->ctnr, A_INVIS);
-  //   }
-  //   waddch(dest->ctnr, content[i]);
-  // }
 }
 
-void get_content(xmlNode *node, struct parts *dest, int line_fold)
+Content *
+get_content(xmlNode *node, int fold)
 {
-  // size_t       length;
-  bool           isCode = FALSE;
-  Contents *     piece;
-  xmlBufferPtr   buffer;
+  Content *      head = NULL;
+  Content *      piece;
+  Content *      tail;
   xmlNode *      curNode;
+  xmlBufferPtr   buffer;
   const xmlChar *ret;
-  piece = contentsNew(line_fold);
-  if (dest->resize_key)
-    return;
 
   for (curNode = node; curNode != NULL; curNode = curNode->next) {
-    if (dest->resize_key)
-      break;
+    tail = content_new();
+    piece = content_new();
+    piece->string = bufnew(OUTPUT_UNIT);
+    piece->fold = fold;
+
     if (curNode->type == XML_ELEMENT_NODE) {
-      if (IS_STRING("article", curNode->parent->name)) {
-        piece->resetAttr = TRUE;
-        piece->fold = line_fold;
+      piece->togAttr = TRUE;
+
+      if (IS_NODE("article", curNode->parent->name)) {
+        piece->fold = fold;
         piece->newline = 1;
       }
-      if (IS_STRING("code", curNode->parent->name)) {
-      }
-      if (IS_STRING("title", curNode->name)) {
+      if (IS_NODE("title", curNode->name)) {
         piece->fold = 0;
         piece->newline = 0;
       }
-      else if (IS_STRING("ul", curNode->name) || IS_STRING("ol", curNode->name)) {  // * unordered list
+      else if (IS_NODE("ul", curNode->name) || IS_NODE("ol", curNode->name)) {  // * unordered list
         piece->fold += 3;
       }
-      else if (IS_STRING("p", curNode->name)) {  // * paragraph
+      else if (IS_NODE("p", curNode->name)) {  // * paragraph
       }
-      else if (IS_STRING("li", curNode->name)) {  //  * list item
-        piece->string = (uint8_t *)"\u00b7";
+      else if (IS_NODE("li", curNode->name)) {  //  * list item
+        bufputs(piece->string, "\u00b7");
         piece->newline = 1;
       }
-      else if (IS_STRING("code", curNode->name)) {  //  * codeblock
+      else if (IS_NODE("code", curNode->name)) {  //  * codeblock
         buffer = xmlBufferCreate();
-        xmlNodeDump(buffer, curNode->children->doc, curNode->children, 0, 0);
-        piece->firAttr = A_CHARTEXT;
+        xmlNodeDump(buffer, curNode->doc, curNode->children, 0, 0);
+        ret = xmlBufferContent(buffer);
+        bufputs(piece->string, (char *)ret);
         piece->color = Yellow;
-        piece->string = xmlBufferContent(buffer);
-        TOG_ATTR(dest->ctnr, piece, TRUE);
-        ARRANGE(dest, piece);
-        TOG_ATTR(dest->ctnr, piece, FALSE);
+        piece->firAttr = A_CHARTEXT;
+        piece->formated = TRUE;
+        COPY_ATTR(tail, piece);
+        piece->next = tail;
+        content_append(&head, piece);
         xmlFree(buffer);
         continue;
       }
-      else if (IS_STRING("strong", curNode->name)) {  //  * bold
+      else if (IS_NODE("strong", curNode->name)) {  //  * bold
         piece->firAttr = A_BOLD;
       }
-      else if (IS_STRING("em", curNode->name)) {  //  * italic
+      else if (IS_NODE("em", curNode->name)) {  //  * italic
         piece->firAttr = A_ITALIC;
       }
-      else if (IS_STRING("u", curNode->name) || IS_STRING("ins", curNode->name)) {  // * underline
+      else if (IS_NODE("ins", curNode->name)) {  // * underline (<u> not included)
         piece->firAttr = A_UNDERLINE;
       }
-      else if (IS_STRING("s", curNode->name) || IS_STRING("del", curNode->name)) {  // * strikethrough
+      else if (IS_NODE("del", curNode->name)) {  // * strikethrough (<s> not included)
         piece->firAttr = A_INVIS;
         piece->secAttr = A_REVERSE;
       }
-      else if (IS_STRING("kbd", curNode->name)) {  //  * keyboard input
+      else if (IS_NODE("kbd", curNode->name)) {  //  * keyboard key
         piece->firAttr = A_DIM;
       }
-      else if (IS_STRING("a", curNode->name)) {  //  * hyperlink
-        piece->firAttr = A_UNDERLINE;
+      else if (IS_NODE("a", curNode->name)) {  //  * hyperlink
         piece->color = Blue;
+        piece->firAttr = A_UNDERLINE;
       }
-      else if (IS_STRING("h1", curNode->name)) {  //  * header 1 as .SH "NAME"
-        piece->string = (uint8_t *)"NAME";
+      else if (IS_NODE("h1", curNode->name)) {  //  * h1 as "NAME" .SH
+        bufputs(piece->string, "\rNAME\n");
+        piece->newline += 1;
+        piece->firAttr = A_BOLD;
+      }
+      else if (IS_NODE("h2", curNode->name)) {  //  * h2 for all other .SH
         piece->fold = 0;
         piece->newline += 1;
         piece->firAttr = A_BOLD;
       }
-      else if (IS_STRING("h2", curNode->name)) {  //  * header 2 for other .SH
-        piece->fold = 0;
-        piece->newline += 1;
-        piece->firAttr = A_BOLD;
-      }
-      else if (IS_STRING("h3", curNode->name)) {  //  * header 3 for .SS
+      else if (IS_NODE("h3", curNode->name)) {  //  * h3 for .SS
         piece->fold = 3;
         piece->newline += 1;
         piece->firAttr = A_BOLD;
       }
-      else if (IS_STRING("h4", curNode->name)) {  //  * header 4 as Sub of .SS
-        piece->string = (uint8_t *)"SUB: ";
-        piece->length = 6;
+      else if (IS_NODE("h4", curNode->name)) {  //  * h4 as Sub of .SS
+        bufputs(piece->string, "SUB: ");
         piece->fold = 4;
         piece->newline += 1;
         piece->firAttr = A_BOLD;
       }
-      else if (IS_STRING("h5", curNode->name)) {  //  * header 5 as Points in Sub
-        piece->string = (uint8_t *)"PT: ";
-        piece->length = 5;
+      else if (IS_NODE("h5", curNode->name)) {  //  * h5 as Points in Sub
+
+        bufputs(piece->string, "PT: ");
         piece->fold = 5;
         piece->newline += 1;
         piece->firAttr = A_BOLD;
       }
-      else if (IS_STRING("h6", curNode->name)) {  // * header 6 as Sub of Points
-        piece->string = (uint8_t *)"PT SUB: ";
+      else if (IS_NODE("h6", curNode->name)) {  // * h6 as Sub of Points
+        bufputs(piece->string, "PT SUB: ");
         piece->fold = 6;
         piece->newline += 1;
         piece->firAttr = A_BOLD;
       }
-      else {
-        if (IS_STRING("img", curNode->name)) {
-          ret = GET_PROP(curNode, "alt");
-          if (ret = GET_PROP(curNode, "alt"))
-            piece->string = ret;
-          piece->firAttr = A_UNDERLINE;
-          piece->color = Blue;
-        }
+      else if (IS_NODE("img", curNode->name)) {
+        ret = GET_PROP(curNode, "alt");
+        bufput(piece->string, (char *)ret, strlen((char *)ret));
+        piece->color = Blue;
+        piece->firAttr = A_UNDERLINE;
       }
-      tog_attr(dest->ctnr, piece->resetAttr, piece->color, piece->firAttr, piece->secAttr, TRUE);
-      if (piece->string != NULL)
-        piece->length = strlen((const char *)piece->string);
-
-      ARRANGE(dest, piece);
     }
     else if (curNode->type == XML_TEXT_NODE) {
-      if (IS_STRING("li", curNode->parent->name)) {
-        // piece->char_prefix = (unsigned char*)"\n\u00b7 ";
-      }
-      else if (IS_STRING("h1", curNode->parent->name)) {
+      if (IS_NODE("h1", curNode->parent->name))
+      {
         piece->newline = 1;
-        piece->fold = line_fold;
+        piece->firAttr = A_BOLD;
+        piece->fold = fold;
       }
 
-      if (!IS_STRING("\n", curNode->content)) {
-        piece->string = curNode->content;
-        if (piece->string != NULL)
-          piece->length = strlen((const char *)piece->string);
-        ARRANGE(dest, piece);
+      ret = curNode->content;
+      if (!IS_NODE("\n", ret)) {
+        bufput(piece->string, (char *)ret, strlen((char *)ret));
       }
-      // else {
-      // piece->string = curNode->content;
-      // sdmessage(piece->string);
-      // }
     }
+    COPY_ATTR(tail, piece);
+    content_append(&head, piece);
+    content_append(&head, get_content(curNode->children, piece->fold));
 
-    get_content(curNode->children, dest, piece->fold);
-    tog_attr(dest->ctnr, piece->resetAttr, piece->color, piece->firAttr, piece->secAttr, FALSE);
-    contentsReset(piece);
+    content_append(&head, tail);
   }
-  contentsFree(piece);
+
+  return head;
 }
 
 int view(const Config *configed, struct buf *ob, int blocks)
 {
-  int           ymax, xmax;
-  int           key;
-  int           curLine;
-  struct parts *page;
-  struct parts *status;
-  xmlDoc *      doc;
-  xmlNode *     rootNode;
+  bool     update = TRUE;        /* control needs to update */
+  int      ymax, xmax;           /* dimension of stdscr */
+  int      key = 0, prevKey = 0; /* input key, previous key */
+  int      lineNum = 0;          /* cursor position on page */
+  Part *   page;                 /* content container */
+  Part *   status;               /* status line container */
+  Content *content;
+  xmlDoc * doc;
+  xmlNode *rootNode;
 
   LIBXML_TEST_VERSION;
 
-  //  Render result
+  // * Grow DOM tree;
   doc = htmlReadMemory((char *)(ob->data), (int)(ob->size),
                        "input markdown", NULL,
                        HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
-  if (doc == NULL) {
-    sderror(strerror(errno));
-    // sderror("Failed to parse document\n");
-    return 1;
+  if (!doc) {
+    // sderror(strerror(errno));
+    sderror("Failed to parse document");
+    return EXIT_FAILURE;
   }
 
   rootNode = xmlDocGetRootElement(doc);
-  if (rootNode == NULL) {
-    sderror(strerror(errno));
-    // sderror("empty document\n");
+  if (!rootNode) {
+    // sderror(strerror(errno));
+    sderror("empty document");
     xmlFreeDoc(doc);
-    return 1;
+    return EXIT_FAILURE;
   }
+  content = get_content(rootNode, configed->lineFold);
 
-  //  Initialize ncurses
+  xmlFreeDoc(doc);
+  // * Initialize ncurses
   setlocale(LC_ALL, "");
   initscr();
-  // cbreak(); /* make getch() process one char at a time */
   halfdelay(1);
-  noecho(); /* disable output of keyboard typing */
+  noecho();             /* disable echo of keyboard typing */
+  keypad(stdscr, TRUE); /* enable arrow keys */
+  curs_set(0);          /* disable cursor */
 
-  curs_set(0); /* disable cursor */
-
-  //  Initialize colors if terminal support
-  if (has_colors()) {
+  if (has_colors()) {  // * Set color if terminal support
     start_color();
     use_default_colors();
 
-    //  todo: 256 color mode
-    if (COLORS == 256) {
+    if (COLORS == 256) {  //  todo: 256 color mode
       init_pair(Standard, -1, -1);
       init_pair(Red, COLOR_RED, -1);
       init_pair(Green, COLOR_GREEN, -1);
@@ -387,8 +368,7 @@ int view(const Config *configed, struct buf *ob, int blocks)
       init_pair(Cyan, COLOR_CYAN, -1);
       init_pair(White, COLOR_WHITE, -1);
     }
-    //  8 color mode
-    else {
+    else {  // * 8 color mode
       init_pair(Standard, -1, -1);
       init_pair(Red, COLOR_RED, -1);
       init_pair(Green, COLOR_GREEN, -1);
@@ -401,83 +381,82 @@ int view(const Config *configed, struct buf *ob, int blocks)
   }
 
   GET_SCREEN_SIZE(ymax, xmax);
-  curLine = 0;
-  page = partsNew(blocks, xmax, 0, 0); /* file page */
+  page = part_new(blocks, xmax, 0, 0);
   page->ctnr = newpad(page->height, page->width);
-  keypad(page->ctnr, TRUE); /* enable arrow keys */
 
-  status = partsNew(1, xmax, ymax, 0); /* status page at bottom */
+  status = part_new(1, xmax, ymax, 0);
   status->ctnr = newwin(status->height, status->width, status->curY, status->curX);
-  scrollok(status->ctnr, TRUE); /* newline implement as auto refresh */
-
-  refresh();
+  scrollok(status->ctnr, TRUE);
   wattrset(status->ctnr, A_REVERSE);
 
-  get_content(rootNode, page, configed->line_fold);
+  refresh();
 
-  while ((key = wgetch(page->ctnr)) != 'q') {
+  while ((key = getch()) != 'q') {
     switch (key) {
       case 'j':
       case ENTER:
-      case KEY_DOWN:
-        if (curLine + ymax < page->height)
-          curLine++;
+      case KEY_DOWN: {
+        if (lineNum + ymax < page->height)
+          lineNum++;
         break;
-      case KEY_RESIZE:
-        halfdelay(3);
-        page->resize_key = TRUE;
-        GET_SCREEN_SIZE(ymax, xmax);
-        break;
+      }
       case 'k':
       case KEY_BACKSPACE:
-      case KEY_UP:
-        if (curLine > 0)
-          curLine--;
+      case KEY_UP: {
+        if (lineNum > 0)
+          lineNum--;
         break;
-      case -1:
-        cbreak();
-        page->resize_key = FALSE;
-
+      }
+      case KEY_RESIZE: {
+        update = TRUE;
         GET_SCREEN_SIZE(ymax, xmax);
-        if (status->curY != ymax) {
-          mvwin(status->ctnr, ymax, 0);
-        }
+        break;
+      }
+      case -1: {
+        if (update) {
+          key = 0;
+          update = !update;
+          if (prevKey == KEY_RESIZE) {
+            page->height = blocks;
+            page->width = xmax;
+            wresize(page->ctnr, page->height, page->width);
+            wclear(page->ctnr);
+            mvwin(status->ctnr, ymax, 0);
+          }
 
-        if (page->width != xmax) {
-          page->width = xmax;
-          wresize(page->ctnr, blocks, page->width);
-          werase(page->ctnr);
-          page->curX = page->curY = 0;
-          get_content(rootNode, page, configed->line_fold);
+          render_content(page, content);
         }
         break;
+      }
       default:
-        // page->resize_key = FALSE;
+        key = -1;
         break;
     }
-    prefresh(page->ctnr, curLine, 0, 0, 0, ymax, xmax);
+    if (key != -1) {
+      if (ymax >= page->height)
+        wprintw(status->ctnr, "\n Markdown page (ALL) (press q to quit)");
+      else if (lineNum <= 0)
+        wprintw(status->ctnr, "\n Markdown page (TOP) (press q to quit)");
+      else if (lineNum + ymax < page->height)
+        wprintw(status->ctnr, "\n Markdown page (%d%%) (press q to quit)", ((lineNum + ymax) * 100) / page->height);
+      else
+        wprintw(status->ctnr, "\n Markdown page (END) (press q to quit)");
 
-    if (ymax >= page->height) {
-      wprintw(status->ctnr, "\n Markdown page (ALL) (press q to quit)");
+      wnoutrefresh(status->ctnr);
+      pnoutrefresh(page->ctnr, lineNum, 0, 0, 0, ymax - 1, xmax);
     }
-    else if (curLine <= 0) {
-      wprintw(status->ctnr, "\n Markdown page (TOP) (press q to quit)");
-    }
-    else if (curLine + ymax < page->height)
-      wprintw(status->ctnr,
-              "\n Markdown page (%d%%) (press q to quit)",
-              ((curLine + ymax) * 100) / page->height);
-    else
-      wprintw(status->ctnr, "\n Markdown page (END) (press q to quit)");
-    wrefresh(status->ctnr);
+    prevKey = key;
+    doupdate();
   }
 
   //  Clean up
-  xmlFreeDoc(doc);
-  partsFree(page);
-  partsFree(status);
+  part_free(page);
+  part_free(status);
   endwin();
-  return 0;
+
+  content_free(content);
+
+  return EXIT_SUCCESS;
 }
 
 /* vim: set filetype=c: */

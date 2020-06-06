@@ -20,25 +20,34 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 DEPDIR=depends
 
 # "Machine-dependant" options
 #MFLAGS=-fPIC
 UNAME_S := $(shell uname -s 2>/dev/null || echo not)
+
+SOURCES = $(sort $(wildcard src/*.c blender/*.c parser/*.c))
+OBJECTS = $(SOURCES:.c=.o)
+PREFIX ?= /usr/local
+TARGET = mdn
+DESTDIR =
+
 CURSES = ncursesw
 OSFLAGS = -Wl,--copy-dt-needed-entries
+DEFINE = -D HAS_NCURSESW_H
 
 ifeq ($(UNAME_S),Darwin)
 	CURSES := ncurses
 	OSFLAGS :=
+	DEFINE := -D HAS_NCURSES_H
 endif
 
-CFLAGS = -c -g -O3 -Wall -Wsign-compare -Iparser -Iblender -Iinclude -I/usr/include/libxml2
-LDFLAGS = -g -O3 $(OSFLAGS) -l$(CURSES) -lxml2 -Wall -Werror
-CC = gcc
+LDLIB = -l$(CURSES) -lxml2
+CFLAGS = -c -g -O3 -Wall -Wsign-compare -Iparser -Iblender -Iinclude -I/usr/include/libxml2 $(DEFINE)
+LDFLAGS = -g -O3 $(OSFLAGS) -Wall -Werror
+# CC = gcc
 
-MANDOWN_SRC=\
+SRC=\
 	src/mandown.o \
 	src/view.o \
 	parser/markdown.o \
@@ -49,14 +58,15 @@ MANDOWN_SRC=\
 	blender/houdini_blender_e.o \
 	blender/houdini_href_e.o
 
-all:		mandown
+all:		$(TARGET)
 
-.PHONY:		all clean
+.PHONY:		all clean install uninstall
 
 # executables
 
-mandown:	$(MANDOWN_SRC)
-	$(CC) $^ -o $@ $(LDFLAGS)
+$(TARGET):	$(SRC)
+	$(CC) $^ -o $@ $(LDLIB) $(LDFLAGS)
+
 
 # perfect hashing
 blender_blocks: parser/blender_blocks.h
@@ -67,9 +77,15 @@ parser/blender_blocks.h: blender_block_names.txt
 
 # housekeeping
 clean:
-	rm -f ./mandown
-	rm -f parser/*.o blender/*.o src/*.o
-	rm -rf $(DEPDIR)
+	$(RM) $(TARGET)
+	$(RM) $(OBJECTS)
+
+install: all
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install -m 755 $(TARGET) $(DESTDIR)$(PREFIX)/bin/$(TARGET)
+
+uninstall:
+	$(RM) $(DESTDIR)$(PREFIX)/bin/$(TARGET)
 
 # dependencies
 include $(wildcard $(DEPDIR)/*.d)

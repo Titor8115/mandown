@@ -1,36 +1,15 @@
 #ifndef MDN_VIEW_H
 #define MDN_VIEW_H
 
-#if defined __has_include
-#if __has_include(<ncursesw/ncurses.h>)
-#include <ncursesw/ncurses.h>
-#elif __has_include(<ncurses.h>)
-#include <ncurses.h>
-#endif
-#if __has_include(<libxml/HTMLparser.h>)
-#include <libxml/HTMLparser.h>
-#elif __has_include(<libxml2/libxml/HTMLparser.h>)
-#include <libxml2/libxml/HTMLparser.h>
-#endif
-#if __has_include(<libxml/tree.h>)
-#include <libxml/tree.h>
-#elif __has_include(<libxml2/libxml/tree.h>)
-#include <libxml2/libxml/tree.h>
-#endif
-#if __has_include(<libxml/xmlerror.h>)
-#include <libxml/xmlerror.h>
-#elif __has_include(<libxml2/libxml/xmlerror.h>)
-#include <libxml2/libxml/xmlerror.h>
-#endif
-#else
 #include <libxml/HTMLparser.h>
 #include <libxml/HTMLtree.h>
 #include <libxml/xmlerror.h>
+
+#ifdef HAS_NCURSES_H
+#include <ncurses.h>
+#else
 #include <ncursesw/ncurses.h>
 #endif
-
-#include <stdbool.h>
-#include <stdint.h>
 
 #include "buffer.h"
 #include "mandown.h"
@@ -41,31 +20,29 @@ extern "C" {
 
 #define ENTER 10
 #ifndef A_ITALIC
-#define A_ITALIC NCURSES_BITS(1U,23)
+#define A_ITALIC NCURSES_BITS(1U, 23)
 #endif
 
-typedef struct contents Contents;
+typedef struct contents Content;
 struct contents {
-  Contents *pre;
-  Contents *next;
-  uint8_t * string;
-  int       length;
-  int       color;
-  int       firAttr;
-  int       secAttr;
-  int       fold;
-  int       newline;
-  bool      resetAttr;
+  struct buf *string;
+  Content *   next;
+  int         fold;
+  int         newline;
+  int         color;
+  int         firAttr;
+  int         secAttr;
+  bool        togAttr;
+  bool        formated;
 };
 
+typedef struct parts Part;
 struct parts {
   WINDOW *ctnr;
   int     height;
   int     width;
   int     curY;
   int     curX;
-  int     resize_key;
-  bool    resized;
 };
 
 typedef enum {
@@ -79,20 +56,23 @@ typedef enum {
   White,
 } Palette;
 
-#define IS_STRING(string, node) \
+#define IS_NODE(string, node) \
   xmlStrEqual((xmlChar *)string, (xmlChar *)node)
 
 #define GET_PROP(node, string) \
   xmlGetProp((xmlNodePtr)node, (xmlChar *)string)
 
 #define ARRANGE(parts, content) \
-  arrange_content(parts, content)
+  render_content(parts, content)
 
 #define GET_SCREEN_SIZE(y, x) \
   (y = getmaxy(stdscr) - 1, x = getmaxx(stdscr))
 
-#define TOG_ATTR(win, content, toggle) \
-  tog_attr(win, (bool)content->resetAttr, (int)content->color, (int)content->firAttr, (int)content->secAttr, (bool)toggle)
+#define TOG_ATTR(win, toggle, content) \
+  toggle_attr(win, toggle, content->color, content->firAttr, content->secAttr)
+
+#define COPY_ATTR(dest, source) \
+  (dest->color = source->color, dest->firAttr = source->firAttr, dest->secAttr = source->secAttr)
 
 extern int view(const Config *, struct buf *, int);
 // void          formatHandler(struct text *, struct parts *);
