@@ -32,7 +32,7 @@ This is <strong>bold</strong>
 
 This is a <kbd>key</kbd>
 
-Can you see this <s>strikethrough</s> or this <del>strikethrough</del>?
+Can you see this <del>strikethrough</del>?
 
 `This is a code block`
 
