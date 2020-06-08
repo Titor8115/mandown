@@ -33,51 +33,40 @@ void part_free(Part *part)
 }
 
 Content *
-content_new()
+content_new(struct buf *buf)
 {
   Content *ret;
   ret = malloc(sizeof(Content));
 
   if (ret) {
-    ret->string = NULL;
+    ret->string = buf;
     ret->next = NULL;
     ret->fold = 0;
-    ret->newline = 0;
     ret->color = Standard;
     ret->firAttr = A_NORMAL;
     ret->secAttr = A_NORMAL;
+    ret->newline = FALSE;
     ret->togAttr = FALSE;
     ret->formated = FALSE;
   }
   return ret;
 }
 
-void content_append(Content **head, Content *content)
+void content_append(Content **head, Content **content)
 {
   Content *p = *head;
+  Content *new = *content;
+  if (new == NULL)
+    return;
+
   if (*head == NULL) {
-    *head = content;
+    *head = new;
     return;
   }
 
   while (p->next != NULL)
     p = p->next;
-  p->next = content;
-}
-
-void content_reset(Content *content)
-{
-  if (!content)
-    return;
-  content->string = NULL;
-  content->next = NULL;
-  content->fold = 0;
-  content->newline = 0;
-  content->color = Standard;
-  content->firAttr = A_NORMAL;
-  content->secAttr = A_NORMAL;
-  content->togAttr = FALSE;
-  content->formated = FALSE;
+  p->next = new;
 }
 
 void content_free(Content *content)
@@ -86,8 +75,24 @@ void content_free(Content *content)
     return;
   bufrelease(content->string);
   content_free(content->next);
-
   free(content);
+}
+
+void content_reset(Content *content)
+{
+  if (!content)
+    return;
+  bufrelease(content->string);
+  content_free(content->next);
+  content->string = NULL;
+  content->next = NULL;
+  content->fold = 0;
+  content->color = Standard;
+  content->firAttr = A_NORMAL;
+  content->secAttr = A_NORMAL;
+  content->newline = FALSE;
+  content->togAttr = FALSE;
+  content->formated = FALSE;
 }
 
 void toggle_attr(WINDOW *dest, bool toggle, int color, int firAttr, int secAttr)
@@ -106,20 +111,24 @@ void toggle_attr(WINDOW *dest, bool toggle, int color, int firAttr, int secAttr)
 
 void render_content(Part *dest, Content *ib)
 {
-  int      i;
   int      len;
-  char     toc[3] = {' ', '\n', 0};
-  char *   tocptr = toc;
+  size_t   position;
+  char *   toc;
   char *   out;
   char *   string = NULL;
   Content *ob;
 
   for (ob = ib; ob != NULL; ob = ob->next) {
-    for (i = 0; i < ob->newline; i++) {
-      wprintw(dest->ctnr, "\n");
+    if (ob->newline) {
+      if (!(ob->string)) {
+        dest->height += 1;
+        wresize(dest->ctnr, dest->height, dest->width);
+      }
+      getyx(dest->ctnr, dest->curY, dest->curX);
+      wmove(dest->ctnr, dest->curY += 1, 0);
     }
     if (!(ob->string)) {
-      toggle_attr(dest->ctnr, FALSE, ob->color, ob->firAttr, ob->secAttr);
+      toggle_attr(dest->ctnr, ob->togAttr, ob->color, ob->firAttr, ob->secAttr);
       continue;
     }
     else if (ob->togAttr)
@@ -132,47 +141,50 @@ void render_content(Part *dest, Content *ib)
     else
       continue;
 
-    if (ob->formated) {
-      tocptr[0] = '\n';
-      tocptr[1] = '\0';
-    }
-    else {
-      tocptr[0] = ' ';
-      tocptr[1] = '\n';
-    }
+    if (ob->formated)
+      toc = "\n";
+    else
+      toc = " ";
 
+    position = 0;
     out = strtok(string, toc);
     while (out != NULL) {
       len = strlen(out);
 
       // * do height adjustment, and line-fold prefix
       getyx(dest->ctnr, dest->curY, dest->curX);
-      if (dest->curY > dest->height - 2) {
-        dest->height += 1;
-        wresize(dest->ctnr, dest->height, dest->width);
+      if (dest->curY >= dest->height - 1) {
+        wresize(dest->ctnr, dest->height += 1, dest->width);
       }
 
       if (dest->curX == 0) {
-        dest->curX = ob->fold;
-        toggle_attr(dest->ctnr, FALSE, ob->color, ob->firAttr, ob->secAttr);
-        wprintw(dest->ctnr, "%*s", ob->fold, "");
-        toggle_attr(dest->ctnr, TRUE, ob->color, ob->firAttr, ob->secAttr);
+        wmove(dest->ctnr, dest->curY, ob->fold);
       }
 
       // * do printing
-      if (dest->curX + len > dest->width - 2) {
-        dest->height += 2;
-        wresize(dest->ctnr, dest->height, dest->width);
-        toggle_attr(dest->ctnr, FALSE, ob->color, ob->firAttr, ob->secAttr);
-        wprintw(dest->ctnr, "\n%*s", ob->fold, "");
-        toggle_attr(dest->ctnr, TRUE, ob->color, ob->firAttr, ob->secAttr);
+      if (dest->curX + len >= dest->width - 1) {
+        wresize(dest->ctnr, dest->height += 1, dest->width);
+        wmove(dest->ctnr, dest->curY += 1, ob->fold);
       }
+
       wprintw(dest->ctnr, out);
-      toggle_attr(dest->ctnr, FALSE, ob->color, ob->firAttr, ob->secAttr);
-      waddch(dest->ctnr, tocptr[0]);
-      toggle_attr(dest->ctnr, TRUE, ob->color, ob->firAttr, ob->secAttr);
+
+      getyx(dest->ctnr, dest->curY, dest->curX);
+      if (position + len < ob->string->size) {
+        if (toc[0] == '\n') {
+          wresize(dest->ctnr, dest->height += 1, dest->width);
+          wmove(dest->ctnr, dest->curY += 1, 0);
+        }
+        else
+          wmove(dest->ctnr, dest->curY, dest->curX += 1);
+      }
+      else {
+        wmove(dest->ctnr, dest->curY, dest->curX += 1);
+      }
+      position += len;
       out = strtok(NULL, toc);
     }
+
     if (string)
       free(string);
   }
@@ -189,44 +201,61 @@ get_content(xmlNode *node, int fold)
   const xmlChar *ret;
 
   for (curNode = node; curNode != NULL; curNode = curNode->next) {
-    tail = content_new();
-    piece = content_new();
-    piece->string = bufnew(OUTPUT_UNIT);
+    tail = content_new(NULL);
+    piece = content_new(bufnew(OUTPUT_UNIT));
     piece->fold = fold;
 
     if (curNode->type == XML_ELEMENT_NODE) {
       piece->togAttr = TRUE;
 
-      if (IS_NODE("article", curNode->parent->name)) {
-        piece->fold = fold;
-        piece->newline = 1;
-      }
       if (IS_NODE("title", curNode->name)) {
         piece->fold = 0;
-        piece->newline = 0;
+        tail->newline = TRUE;
+      }
+      else if (IS_NODE("h1", curNode->name)) {  //  * h1 as "NAME" .SH
+        bufputs(piece->string, "\rNAME");
+        piece->firAttr = A_BOLD;
+        piece->newline = TRUE;
+      }
+      else if (IS_NODE("h2", curNode->name)) {  //  * h2 for all other .SH
+        piece->fold = 0;
+        piece->firAttr = A_BOLD;
+        piece->newline = TRUE;
+      }
+      else if (IS_NODE("h3", curNode->name)) {  //  * h3 for .SS
+        piece->fold = 3;
+        piece->firAttr = A_BOLD;
+        piece->newline = TRUE;
+      }
+      else if (IS_NODE("h4", curNode->name)) {  //  * h4 as Sub of .SS
+        bufputs(piece->string, "SC: ");
+        piece->fold = 4;
+        piece->firAttr = A_BOLD;
+        piece->newline = TRUE;
+      }
+      else if (IS_NODE("h5", curNode->name)) {  //  * h5 as Points in Sub
+
+        bufputs(piece->string, "PT: ");
+        piece->fold = 5;
+        piece->firAttr = A_BOLD;
+        piece->newline = TRUE;
+      }
+      else if (IS_NODE("h6", curNode->name)) {  // * h6 as Sub of Points
+        bufputs(piece->string, "PS: ");
+        piece->fold = 6;
+        piece->firAttr = A_BOLD;
+        piece->newline = TRUE;
       }
       else if (IS_NODE("ul", curNode->name) || IS_NODE("ol", curNode->name)) {  // * unordered list
         piece->fold += 3;
-      }
-      else if (IS_NODE("p", curNode->name)) {  // * paragraph
+        piece->newline = TRUE;
       }
       else if (IS_NODE("li", curNode->name)) {  //  * list item
         bufputs(piece->string, "\u00b7");
-        piece->newline = 1;
+        piece->newline = TRUE;
       }
-      else if (IS_NODE("code", curNode->name)) {  //  * codeblock
-        buffer = xmlBufferCreate();
-        xmlNodeDump(buffer, curNode->doc, curNode->children, 0, 0);
-        ret = xmlBufferContent(buffer);
-        bufputs(piece->string, (char *)ret);
-        piece->color = Yellow;
-        piece->firAttr = A_CHARTEXT;
-        piece->formated = TRUE;
-        COPY_ATTR(tail, piece);
-        piece->next = tail;
-        content_append(&head, piece);
-        xmlFree(buffer);
-        continue;
+      else if (IS_NODE("p", curNode->name)) {  // * paragraph
+        piece->newline = tail->newline = TRUE;
       }
       else if (IS_NODE("strong", curNode->name)) {  //  * bold
         piece->firAttr = A_BOLD;
@@ -244,69 +273,57 @@ get_content(xmlNode *node, int fold)
       else if (IS_NODE("kbd", curNode->name)) {  //  * keyboard key
         piece->firAttr = A_DIM;
       }
+      else if (IS_NODE("code", curNode->name)) {  //  * codeblock
+        buffer = xmlBufferCreate();
+        xmlNodeDump(buffer, curNode->doc, curNode->children, 0, 0);
+        ret = xmlBufferContent(buffer);
+        bufputs(piece->string, (char *)ret);
+        piece->color = Yellow;
+        piece->firAttr = A_CHARTEXT;
+        piece->formated = TRUE;
+        COPY_ATTR(tail, piece);
+        piece->next = tail;
+        content_append(&head, &piece);
+        xmlFree(buffer);
+        continue;
+      }
       else if (IS_NODE("a", curNode->name)) {  //  * hyperlink
         piece->color = Blue;
         piece->firAttr = A_UNDERLINE;
       }
-      else if (IS_NODE("h1", curNode->name)) {  //  * h1 as "NAME" .SH
-        bufputs(piece->string, "\rNAME\n");
-        piece->newline += 1;
-        piece->firAttr = A_BOLD;
-      }
-      else if (IS_NODE("h2", curNode->name)) {  //  * h2 for all other .SH
-        piece->fold = 0;
-        piece->newline += 1;
-        piece->firAttr = A_BOLD;
-      }
-      else if (IS_NODE("h3", curNode->name)) {  //  * h3 for .SS
-        piece->fold = 3;
-        piece->newline += 1;
-        piece->firAttr = A_BOLD;
-      }
-      else if (IS_NODE("h4", curNode->name)) {  //  * h4 as Sub of .SS
-        bufputs(piece->string, "SUB: ");
-        piece->fold = 4;
-        piece->newline += 1;
-        piece->firAttr = A_BOLD;
-      }
-      else if (IS_NODE("h5", curNode->name)) {  //  * h5 as Points in Sub
-
-        bufputs(piece->string, "PT: ");
-        piece->fold = 5;
-        piece->newline += 1;
-        piece->firAttr = A_BOLD;
-      }
-      else if (IS_NODE("h6", curNode->name)) {  // * h6 as Sub of Points
-        bufputs(piece->string, "PT SUB: ");
-        piece->fold = 6;
-        piece->newline += 1;
-        piece->firAttr = A_BOLD;
-      }
-      else if (IS_NODE("img", curNode->name)) {
+      else if (IS_NODE("img", curNode->name)) {  //  * image
         ret = GET_PROP(curNode, "alt");
         bufput(piece->string, (char *)ret, strlen((char *)ret));
         piece->color = Blue;
         piece->firAttr = A_UNDERLINE;
       }
+      if (IS_NODE("a", curNode->parent->name) || IS_NODE("img", curNode->parent->name)) {
+        piece->color = Blue;
+        piece->firAttr = A_UNDERLINE;
+        piece->secAttr = A_NORMAL;
+      }
+      if (!piece->string->data) {
+        bufrelease(piece->string);
+        piece->string = NULL;
+      }
     }
     else if (curNode->type == XML_TEXT_NODE) {
-      if (IS_NODE("h1", curNode->parent->name))
-      {
-        piece->newline = 1;
-        piece->firAttr = A_BOLD;
-        piece->fold = fold;
+      ret = curNode->content;
+      if (!xmlStrEqual((xmlChar *)"\n", ret))
+        bufput(piece->string, (char *)ret, strlen((char *)ret));
+      else {
+        bufrelease(piece->string);
+        piece->string = NULL;
       }
 
-      ret = curNode->content;
-      if (!IS_NODE("\n", ret)) {
-        bufput(piece->string, (char *)ret, strlen((char *)ret));
+      if (IS_NODE("h1", curNode->parent->name)) {
+        piece->newline = TRUE;
       }
     }
     COPY_ATTR(tail, piece);
-    content_append(&head, piece);
-    content_append(&head, get_content(curNode->children, piece->fold));
-
-    content_append(&head, tail);
+    piece->next = get_content(curNode->children, piece->fold);
+    content_append(&head, &piece);
+    content_append(&head, &tail);
   }
 
   return head;
@@ -381,7 +398,7 @@ int view(const Config *configed, struct buf *ob, int blocks)
   }
 
   GET_SCREEN_SIZE(ymax, xmax);
-  page = part_new(blocks, xmax, 0, 0);
+  page = part_new(1, xmax, 0, 0);
   page->ctnr = newpad(page->height, page->width);
 
   status = part_new(1, xmax, ymax, 0);
@@ -417,7 +434,7 @@ int view(const Config *configed, struct buf *ob, int blocks)
           key = 0;
           update = !update;
           if (prevKey == KEY_RESIZE) {
-            page->height = blocks;
+            page->height = 1;
             page->width = xmax;
             wresize(page->ctnr, page->height, page->width);
             wclear(page->ctnr);
@@ -425,6 +442,8 @@ int view(const Config *configed, struct buf *ob, int blocks)
           }
 
           render_content(page, content);
+          if (lineNum + ymax > page->height)
+            lineNum = page->height - ymax;
         }
         break;
       }

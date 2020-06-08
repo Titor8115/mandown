@@ -10,69 +10,48 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 ## Update
 
-**Line Wrap** won't break words apart.
+**Resizing** smoothly! (wait for 0.1s then render)
 
-**Bug:** resizing seems to break the rendering... Fix is on the way.
+**Line Wrap** fully optimized.
 
 ## Sample
 
 ![screenshot](./screenshot.png)
 
-- This is nested list
-  - 😊 is rendered
-    - So is 🌚 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔
-      - It is 🔥
-        - Me right now 💀
-
-This is <ins>underline</ins> sdadssa
-
-This is <em>italic</em>
-
-This is <strong>bold</strong>
-
-This is a <kbd>key</kbd>
-
-Can you see this <del>strikethrough</del>?
-
-`This is a code block`
-
 ## Installation
 
-Current version is incomplete. However, it should work on simpler Markdown documents.
+Current version is still being developed for some HTML tags. However, it should work on most Markdown documents.
 
-The Ncurses UI is still being developed for different HTML tags.
+The installed binary `mdn` would be at `/usr/local/bin/`
 
 ```shell
 $ git clone https://github.com/Titor8115/mandown.git
 $ cd mandown
-$ make
+$ make install
 ```
 
-## Library requirements
-
-Mandown requires `libncurses(w)` and `libxml2` as compile-time dependencies.
-
-Make sure you have them installed before compiling.
-
-### Homebrew
-```shell
-$ brew install ncurses
-$ brew install libxml2-dev
-```
-
-### Debian
-```shell
-$ apt-get install libncursesw5-dev
-$ apt-get install  libxml2-dev
-```
-
-If headers are still missing or any other issues. Feel free to create an issue.
-
-### Usage
+To remove the binary, you can run the commands below, or remove manually.
 
 ```shell
 $ cd mandown
-$ ./mdn README.md
+$ make uninstall
+```
+
+If you just want to compile and test it.
+
+```shell
+$ cd mandown
+$ make
+```
+
+Feel free to create an issue.
+
+## Usage
+
+Check out the new sample
+
+```shell
+$ mdn sample.md
 ```
 
 Mouse wheel scrolling is supported! (if your terminal emulator allows)
@@ -83,10 +62,33 @@ Scroll Down: <kbd>↓</kbd>, <kbd>j</kbd>, <kbd>ENTER</kbd>
 
 Exit: <kbd>q</kbd>
 
+To read detailed usage, run `mdn -h`
+
+## Library dependency
+
+Mandown requires `libncurses(w)` and `libxml2` as compile-time dependencies.
+
+Make sure you have them installed before compiling.
+
+### Homebrew
+
+```shell
+$ brew install ncurses
+$ brew install libxml2-dev
+```
+
+### Debian
+
+```shell
+$ apt-get install libncursesw5-dev
+$ apt-get install libxml2-dev
+```
+
+
 ## Todo
 
 - [ ] Piping capability
 - [x] Line fold/wrap on white space
 - [x] Optimized resizing
 - [ ] Table and contents rendering
-- [ ] Makefile makeover
+- [x] Makefile makeover

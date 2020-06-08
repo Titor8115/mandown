@@ -28,10 +28,10 @@ struct contents {
   struct buf *string;
   Content *   next;
   int         fold;
-  int         newline;
   int         color;
   int         firAttr;
   int         secAttr;
+  bool        newline;
   bool        togAttr;
   bool        formated;
 };
