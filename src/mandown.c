@@ -15,19 +15,19 @@
 
 void sd_message(char *output)
 {
-  fprintf(stdout, "\r%s%snote: %s%s\n", "\033[1m", "\033[36m", "\033[0m",
+  fprintf(stdout, "%s%snote: %s%s\n", "\033[1m", "\033[36m", "\033[0m",
           output);
 }
 
 void sd_error(char *output)
 {
-  fprintf(stderr, "\r%s%serror: %s%s\n", "\033[1m", "\033[31m", "\033[0m",
+  fprintf(stderr, "%s%serror: %s%s\n", "\033[1m", "\033[31m", "\033[0m",
           output);
 }
 
 void sd_warning(char *output)
 {
-  fprintf(stderr, "\r%s%swarning: %s%s\n", "\033[1m", "\033[33m", "\033[0m",
+  fprintf(stderr, "%s%swarning: %s%s\n", "\033[1m", "\033[33m", "\033[0m",
           output);
 }
 

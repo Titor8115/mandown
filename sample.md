@@ -1,16 +1,16 @@
-# header 1 (used as NAME)
+# h1 (used in NAME)
 
 This is sample of `mdn`
 
-## I'm header 2
+## I'm h2
 
-### I'm header 3
+### I'm h3
 
-#### for header 4
+#### for h4
 
-##### for header 5
+##### for h5
 
-###### for header 6
+###### for h6
 
 - level 1 😊
   - level 2 🔥

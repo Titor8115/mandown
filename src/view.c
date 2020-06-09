@@ -109,8 +109,30 @@ void toggle_attr(WINDOW *dest, bool toggle, int color, int firAttr, int secAttr)
   }
 }
 
+void move_cursor(Part *part, int i, int j)
+{
+
+  if (!part->ctnr || !(i || j))
+    return;
+
+  part->curY = i;
+  part->curX = j;
+
+  while (wmove(part->ctnr, part->curY, part->curX) == ERR) {
+    if (part->curY >= part->height) {
+      part->height = part->curY + 1;
+    }
+    if (part->curX >= part->width - 1) {
+      part->curX = 0;
+      part->curY++;
+    }
+    wresize(part->ctnr, part->height, part->width);
+  }
+}
+
 void render_content(Part *dest, Content *ib)
 {
+  int      newline;
   int      len;
   size_t   position;
   char *   toc;
@@ -118,15 +140,10 @@ void render_content(Part *dest, Content *ib)
   char *   string = NULL;
   Content *ob;
 
+  dest->curY = dest->curX = 0;
   for (ob = ib; ob != NULL; ob = ob->next) {
-    if (ob->newline) {
-      if (!(ob->string)) {
-        dest->height += 1;
-        wresize(dest->ctnr, dest->height, dest->width);
-      }
-      getyx(dest->ctnr, dest->curY, dest->curX);
-      wmove(dest->ctnr, dest->curY += 1, 0);
-    }
+    if (ob->newline)
+      move_cursor(dest, dest->curY + 1, 0);
     if (!(ob->string)) {
       toggle_attr(dest->ctnr, ob->togAttr, ob->color, ob->firAttr, ob->secAttr);
       continue;
@@ -150,43 +167,45 @@ void render_content(Part *dest, Content *ib)
     out = strtok(string, toc);
     while (out != NULL) {
       len = strlen(out);
+      newline = len / (dest->width - ob->fold);
 
       // * do height adjustment, and line-fold prefix
-      getyx(dest->ctnr, dest->curY, dest->curX);
-      if (dest->curY >= dest->height - 1) {
-        wresize(dest->ctnr, dest->height += 1, dest->width);
-      }
-
-      if (dest->curX == 0) {
-        wmove(dest->ctnr, dest->curY, ob->fold);
+      // getyx(dest->ctnr, dest->curY, dest->curX);
+      if (dest->curY + newline >= dest->height) {
+        dest->height = dest->curY + newline + 1;
+        wresize(dest->ctnr, dest->height, dest->width);
       }
 
       // * do printing
-      if (dest->curX + len >= dest->width - 1) {
-        wresize(dest->ctnr, dest->height += 1, dest->width);
-        wmove(dest->ctnr, dest->curY += 1, ob->fold);
+      if (dest->curX == 0)
+        move_cursor(dest, dest->curY, ob->fold);
+      else if (dest->curX + len >= dest->width) {
+        move_cursor(dest, dest->curY + 1, ob->fold);
       }
 
       wprintw(dest->ctnr, out);
-
+      // dest->curX += len;
       getyx(dest->ctnr, dest->curY, dest->curX);
-      if (position + len < ob->string->size) {
-        if (toc[0] == '\n') {
-          wresize(dest->ctnr, dest->height += 1, dest->width);
-          wmove(dest->ctnr, dest->curY += 1, 0);
+      if ((position += len + 1) < ob->string->size) {
+        if (toc[0] == '\n')
+          move_cursor(dest, dest->curY + 1, ob->fold);
+        else {
+          dest->curX++;
+          waddch(dest->ctnr, toc[0]);
         }
-        else
-          wmove(dest->ctnr, dest->curY, dest->curX += 1);
       }
-      else {
-        wmove(dest->ctnr, dest->curY, dest->curX += 1);
-      }
-      position += len;
+      else
+        move_cursor(dest, dest->curY, dest->curX + 1);
+
       out = strtok(NULL, toc);
     }
 
     if (string)
       free(string);
+  }
+  if (dest->height >= dest->curY) {
+    dest->height = dest->curY + 1;
+    wresize(dest->ctnr, dest->height, dest->width);
   }
 }
 
@@ -207,7 +226,9 @@ get_content(xmlNode *node, int fold)
 
     if (curNode->type == XML_ELEMENT_NODE) {
       piece->togAttr = TRUE;
-
+      if (IS_NODE("body", curNode->parent->name)) {
+        piece->newline = tail->newline = TRUE;
+      }
       if (IS_NODE("title", curNode->name)) {
         piece->fold = 0;
         tail->newline = TRUE;
@@ -215,40 +236,39 @@ get_content(xmlNode *node, int fold)
       else if (IS_NODE("h1", curNode->name)) {  //  * h1 as "NAME" .SH
         bufputs(piece->string, "\rNAME");
         piece->firAttr = A_BOLD;
-        piece->newline = TRUE;
+        tail->newline = FALSE;
       }
       else if (IS_NODE("h2", curNode->name)) {  //  * h2 for all other .SH
         piece->fold = 0;
         piece->firAttr = A_BOLD;
-        piece->newline = TRUE;
+        tail->newline = FALSE;
       }
       else if (IS_NODE("h3", curNode->name)) {  //  * h3 for .SS
         piece->fold = 3;
         piece->firAttr = A_BOLD;
-        piece->newline = TRUE;
+        tail->newline = FALSE;
       }
       else if (IS_NODE("h4", curNode->name)) {  //  * h4 as Sub of .SS
         bufputs(piece->string, "SC: ");
         piece->fold = 4;
         piece->firAttr = A_BOLD;
-        piece->newline = TRUE;
+        tail->newline = FALSE;
       }
       else if (IS_NODE("h5", curNode->name)) {  //  * h5 as Points in Sub
 
         bufputs(piece->string, "PT: ");
         piece->fold = 5;
         piece->firAttr = A_BOLD;
-        piece->newline = TRUE;
+        tail->newline = FALSE;
       }
       else if (IS_NODE("h6", curNode->name)) {  // * h6 as Sub of Points
         bufputs(piece->string, "PS: ");
         piece->fold = 6;
         piece->firAttr = A_BOLD;
-        piece->newline = TRUE;
+        tail->newline = FALSE;
       }
       else if (IS_NODE("ul", curNode->name) || IS_NODE("ol", curNode->name)) {  // * unordered list
         piece->fold += 3;
-        piece->newline = TRUE;
       }
       else if (IS_NODE("li", curNode->name)) {  //  * list item
         bufputs(piece->string, "\u00b7");
@@ -398,12 +418,12 @@ int view(const Config *configed, struct buf *ob, int blocks)
   }
 
   GET_SCREEN_SIZE(ymax, xmax);
-  page = part_new(1, xmax, 0, 0);
+  page = part_new(blocks, xmax, 0, 0);
   page->ctnr = newpad(page->height, page->width);
 
   status = part_new(1, xmax, ymax, 0);
   status->ctnr = newwin(status->height, status->width, status->curY, status->curX);
-  scrollok(status->ctnr, TRUE);
+  // scrollok(status->ctnr, TRUE);
   wattrset(status->ctnr, A_REVERSE);
 
   refresh();
@@ -434,7 +454,7 @@ int view(const Config *configed, struct buf *ob, int blocks)
           key = 0;
           update = !update;
           if (prevKey == KEY_RESIZE) {
-            page->height = 1;
+            // page->height = blocks;
             page->width = xmax;
             wresize(page->ctnr, page->height, page->width);
             wclear(page->ctnr);
@@ -442,8 +462,6 @@ int view(const Config *configed, struct buf *ob, int blocks)
           }
 
           render_content(page, content);
-          if (lineNum + ymax > page->height)
-            lineNum = page->height - ymax;
         }
         break;
       }
@@ -453,13 +471,13 @@ int view(const Config *configed, struct buf *ob, int blocks)
     }
     if (key != -1) {
       if (ymax >= page->height)
-        wprintw(status->ctnr, "\n Markdown page (ALL) (press q to quit)");
+        wprintw(status->ctnr, "\r Markdown page (ALL) (press q to quit)");
       else if (lineNum <= 0)
-        wprintw(status->ctnr, "\n Markdown page (TOP) (press q to quit)");
+        wprintw(status->ctnr, "\r Markdown page (TOP) (press q to quit)");
       else if (lineNum + ymax < page->height)
-        wprintw(status->ctnr, "\n Markdown page (%d%%) (press q to quit)", ((lineNum + ymax) * 100) / page->height);
+        wprintw(status->ctnr, "\r Markdown page (%d%%) (press q to quit)", ((lineNum + ymax) * 100) / page->height);
       else
-        wprintw(status->ctnr, "\n Markdown page (END) (press q to quit)");
+        wprintw(status->ctnr, "\r Markdown page (END) (press q to quit)");
 
       wnoutrefresh(status->ctnr);
       pnoutrefresh(page->ctnr, lineNum, 0, 0, 0, ymax - 1, xmax);
