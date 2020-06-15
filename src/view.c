@@ -5,197 +5,236 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <panel.h>
 
 #include "buffer.h"
+#include "stack.h"
+#include "dom.h"
 
-Part *
-part_new(int height, int width, int curY, int curX)
+
+
+enum
 {
-  Part *ret;
-  ret = malloc(sizeof(Part));
+  C_DEFAULT = 0,
+  C_RED,
+  C_GREEN,
+  C_YELLOW,
+  C_BLUE,
+  C_MAGENTA,
+  C_CYAN,
+
+  C_MAX,
+};
+
+/* Available colors: BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE */
+static const struct { short fg; short bg; } color_pairs[] =
+{
+  /* color */     /* foreground*/ /* background*/
+  [C_DEFAULT]   = { -1,                     -1 },
+  [C_RED]       = { COLOR_RED,              -1 },
+  [C_GREEN]     = { COLOR_GREEN,            -1 },
+  [C_YELLOW]    = { COLOR_YELLOW,           -1 },
+  [C_BLUE]      = { COLOR_BLUE,             -1 },
+  [C_MAGENTA]   = { COLOR_MAGENTA,          -1 },
+  [C_CYAN]      = { COLOR_CYAN,             -1 },
+};
+
+enum
+{
+  FRAME_NONE,
+  FRAME_HELP,
+  FRAME_STAT,
+  FRAME_PAGE,
+  FRAME_HREF,
+};
+
+static const char frame_title[][19] =
+{
+  [FRAME_NONE]    = "",
+  [FRAME_HELP]    = " Help ",
+  [FRAME_PAGE]    = " struct dom_link_t ",
+  [FRAME_STAT]    = " Markdown page ",
+  [FRAME_HREF]    = " Reference ",
+};
+
+static const attr_t frame_attr[] =
+{
+  [FRAME_NONE]    = A_NORMAL,
+  [FRAME_HELP]    = A_NORMAL,
+  [FRAME_PAGE]    = A_NORMAL,
+  [FRAME_STAT]    = A_REVERSE,
+  [FRAME_HREF]    = A_REVERSE,
+};
+
+enum {
+  N_PLAIN = 0,
+  N_EM,
+  N_STRONG,
+  N_INS,
+  N_DEL,
+  N_CODE,
+  N_KBD,
+
+  N_HEADING,
+  N_LINK
+};
+
+static const attr_t node_attr[] =
+{
+  [N_EM]        = A_ITALIC,
+  [N_STRONG]    = A_BOLD,
+  [N_INS]       = A_UNDERLINE,
+  [N_DEL]       = A_INVIS     | A_REVERSE,
+  [N_CODE]      = A_NORMAL    | COLOR_PAIR(C_YELLOW),
+  [N_KBD]       = A_DIM,
+
+  [N_HEADING]   = A_BOLD,
+  [N_LINK]      = A_UNDERLINE | COLOR_PAIR(C_BLUE),
+};
+
+
+struct frame_t {
+  WINDOW *win;
+  attr_t  attr;
+  int     frame_type;
+  int     height;
+  int     width;
+  int     beg_y;
+  int     beg_x;
+  int     cur_y;
+  int     cur_x;
+};
+
+static void
+create_color_pairs()
+{
+  if (has_colors()) {  // * Set color if terminal support
+    start_color();
+    use_default_colors();
+    for (int i = C_DEFAULT; i < C_MAX; i++)
+      init_pair(i, color_pairs[i].fg, color_pairs[i].bg);
+  }
+  else {
+    sdwarn("Terminal doesn't seem to support colors");
+    return;
+  }
+}
+
+struct frame_t *
+frame_new(int type, int height, int width, int begin_y, int begin_x)
+{
+  struct frame_t *ret;
+  ret = malloc(sizeof(struct frame_t));
 
   if (ret) {
-    ret->ctnr = NULL;
-    ret->height = height;
-    ret->width = width;
-    ret->curY = curY;
-    ret->curX = curX;
+    ret->win      = NULL;
+    ret->attr       = frame_attr[type];
+    ret->frame_type = type;
+    ret->height     = height;
+    ret->width      = width;
+    ret->beg_y = ret->cur_y = begin_y;
+    ret->beg_x = ret->cur_x = begin_x;
   }
   return ret;
 }
 
-void part_free(Part *part)
+void
+frame_free(struct frame_t *part)
 {
   if (!part)
     return;
-  delwin(part->ctnr);
+  delwin(part->win);
   free(part);
 }
 
-Content *
-content_new(struct buf *buf)
+static inline void
+toggle_attr(WINDOW *dest, int toggle, int attributes)
 {
-  Content *ret;
-  ret = malloc(sizeof(Content));
-
-  if (ret) {
-    ret->string = buf;
-    ret->next = NULL;
-    ret->fold = 0;
-    ret->color = Standard;
-    ret->firAttr = A_NORMAL;
-    ret->secAttr = A_NORMAL;
-    ret->newline = FALSE;
-    ret->togAttr = FALSE;
-    ret->formated = FALSE;
-  }
-  return ret;
+  (toggle) ? wattron(dest, attributes) : wattroff(dest, attributes);
 }
 
-void content_append(Content **head, Content **content)
+static void
+move_cursor(struct frame_t *part, int cur_y, int cur_x)
 {
-  Content *p = *head;
-  Content *new = *content;
-  if (new == NULL)
+  if (!part->win)
     return;
 
-  if (*head == NULL) {
-    *head = new;
-    return;
-  }
-
-  while (p->next != NULL)
-    p = p->next;
-  p->next = new;
-}
-
-void content_free(Content *content)
-{
-  if (!content)
-    return;
-  bufrelease(content->string);
-  content_free(content->next);
-  free(content);
-}
-
-void content_reset(Content *content)
-{
-  if (!content)
-    return;
-  bufrelease(content->string);
-  content_free(content->next);
-  content->string = NULL;
-  content->next = NULL;
-  content->fold = 0;
-  content->color = Standard;
-  content->firAttr = A_NORMAL;
-  content->secAttr = A_NORMAL;
-  content->newline = FALSE;
-  content->togAttr = FALSE;
-  content->formated = FALSE;
-}
-
-void toggle_attr(WINDOW *dest, bool toggle, int color, int firAttr, int secAttr)
-{
-  if (toggle) {
-    if (color) wattron(dest, COLOR_PAIR(color));
-    if (firAttr) wattron(dest, firAttr);
-    if (secAttr) wattron(dest, secAttr);
-  }
-  else {
-    if (color) wattroff(dest, COLOR_PAIR(color));
-    if (firAttr) wattroff(dest, firAttr);
-    if (secAttr) wattroff(dest, secAttr);
-  }
-}
-
-void move_cursor(Part *part, int i, int j)
-{
-
-  if (!part->ctnr || !(i || j))
-    return;
-
-  part->curY = i;
-  part->curX = j;
-
-  while (wmove(part->ctnr, part->curY, part->curX) == ERR) {
-    if (part->curY >= part->height) {
-      part->height = part->curY + 1;
+  while (wmove(part->win, cur_y, cur_x) == ERR) {
+    if (cur_x >= part->width) {
+      cur_x = 0;
+      cur_y++;
     }
-    if (part->curX >= part->width - 1) {
-      part->curX = 0;
-      part->curY++;
+
+    if (cur_y >= part->height) {
+      part->height = cur_y + 2;
     }
-    wresize(part->ctnr, part->height, part->width);
+    wresize(part->win, part->height, part->width);
   }
 }
 
-void render_content(Part *dest, Content *ib)
+static void
+render_content(struct frame_t *dest, struct dom_link_t *ib)
 {
-  int      newline;
+  int      cur_y = 0;
+  int      cur_x = 0;
   int      len;
   size_t   position;
-  char *   toc;
+  char *   toc = " \n";
   char *   out;
   char *   string = NULL;
-  Content *ob;
+  struct dom_link_t *ob;
 
-  dest->curY = dest->curX = 0;
   for (ob = ib; ob != NULL; ob = ob->next) {
-    if (ob->newline)
-      move_cursor(dest, dest->curY + 1, 0);
-    if (!(ob->string)) {
-      toggle_attr(dest->ctnr, ob->togAttr, ob->color, ob->firAttr, ob->secAttr);
-      continue;
+    if (ob->prop & P_CONTROL) {
+      toggle_attr(dest->win, (ob->prop & P_ATTR_ON), ob->buf_attr);
+      toc = (ob->prop & P_SELF_FORMAT) ? "\n" : " \n";
     }
-    else if (ob->togAttr)
-      toggle_attr(dest->ctnr, TRUE, ob->color, ob->firAttr, ob->secAttr);
 
-    if (ob->string->size) {
-      string = calloc(ob->string->size + 1, sizeof(char));
-      strncpy(string, (char *)ob->string->data, ob->string->size);
+    if (ob->prop & P_LINE_BREAK) {
+      // cur_x = ob->fold;
+      move_cursor(dest, ++cur_y, cur_x = 0);
     }
-    else
-      continue;
 
-    if (ob->formated)
-      toc = "\n";
-    else
-      toc = " ";
+
+    if (!ob->buf)
+      continue;
+    else {
+      string = calloc(ob->buf->size + 1, sizeof(char));
+      strncpy(string, (char *)ob->buf->data, ob->buf->size);
+    }
+
 
     position = 0;
     out = strtok(string, toc);
     while (out != NULL) {
       len = strlen(out);
-      newline = len / (dest->width - ob->fold);
 
-      // * do height adjustment, and line-fold prefix
-      // getyx(dest->ctnr, dest->curY, dest->curX);
-      if (dest->curY + newline >= dest->height) {
-        dest->height = dest->curY + newline + 1;
-        wresize(dest->ctnr, dest->height, dest->width);
+      if (cur_x == 0) move_cursor(dest, cur_y, cur_x = ob->fold);
+
+      if ((cur_x > ob->fold) && (cur_x + len >= dest->width)) {
+        cur_x = ob->fold;
+        cur_y ++;
+        move_cursor(dest, cur_y + (len + ob->fold) / dest->width, cur_x);
       }
 
-      // * do printing
-      if (dest->curX == 0)
-        move_cursor(dest, dest->curY, ob->fold);
-      else if (dest->curX + len >= dest->width) {
-        move_cursor(dest, dest->curY + 1, ob->fold);
-      }
-
-      wprintw(dest->ctnr, out);
-      // dest->curX += len;
-      getyx(dest->ctnr, dest->curY, dest->curX);
-      if ((position += len + 1) < ob->string->size) {
-        if (toc[0] == '\n')
-          move_cursor(dest, dest->curY + 1, ob->fold);
-        else {
-          dest->curX++;
-          waddch(dest->ctnr, toc[0]);
+      waddnstr(dest->win, out, len);
+      // j += len;
+      getyx(dest->win, cur_y, cur_x);
+      position += len;
+      if (position < ob->buf->size) {
+        if (toc[0] == '\n') {
+          // cur_x = ob->fold;
+          move_cursor(dest, ++cur_y, cur_x = 0);
+        }
+        else if (cur_x < dest->width) {
+          cur_x++;
+          waddch(dest->win, toc[0]);
         }
       }
       else
-        move_cursor(dest, dest->curY, dest->curX + 1);
+        move_cursor(dest, cur_y, ++cur_x);
+      
+      position++;
 
       out = strtok(NULL, toc);
     }
@@ -203,170 +242,172 @@ void render_content(Part *dest, Content *ib)
     if (string)
       free(string);
   }
-  if (dest->height >= dest->curY) {
-    dest->height = dest->curY + 1;
-    wresize(dest->ctnr, dest->height, dest->width);
+  if (dest->height >= cur_y) {
+    dest->height = cur_y + 1;
+    wresize(dest->win, dest->height, dest->width);
   }
 }
 
-Content *
+struct dom_link_t *
 get_content(xmlNode *node, int fold)
 {
-  Content *      head = NULL;
-  Content *      piece;
-  Content *      tail;
-  xmlNode *      curNode;
-  xmlBufferPtr   buffer;
-  const xmlChar *ret;
+  size_t             len;
+  struct dom_link_t *link;
+  struct dom_link_t *head     = NULL;
+  struct dom_link_t *tail     = NULL;
+  htmlNodePtr        cur_node = node;
+  const xmlChar *    ret;
 
-  for (curNode = node; curNode != NULL; curNode = curNode->next) {
-    tail = content_new(NULL);
-    piece = content_new(bufnew(OUTPUT_UNIT));
-    piece->fold = fold;
+  while (cur_node != NULL) {
+    link = dom_link_new(bufnew(OUTPUT_UNIT));
+    link->fold = fold;
 
-    if (curNode->type == XML_ELEMENT_NODE) {
-      piece->togAttr = TRUE;
-      if (IS_NODE("body", curNode->parent->name)) {
-        piece->newline = tail->newline = TRUE;
-      }
-      if (IS_NODE("title", curNode->name)) {
-        piece->fold = 0;
-        tail->newline = TRUE;
-      }
-      else if (IS_NODE("h1", curNode->name)) {  //  * h1 as "NAME" .SH
-        bufputs(piece->string, "\rNAME");
-        piece->firAttr = A_BOLD;
-        tail->newline = FALSE;
-      }
-      else if (IS_NODE("h2", curNode->name)) {  //  * h2 for all other .SH
-        piece->fold = 0;
-        piece->firAttr = A_BOLD;
-        tail->newline = FALSE;
-      }
-      else if (IS_NODE("h3", curNode->name)) {  //  * h3 for .SS
-        piece->fold = 3;
-        piece->firAttr = A_BOLD;
-        tail->newline = FALSE;
-      }
-      else if (IS_NODE("h4", curNode->name)) {  //  * h4 as Sub of .SS
-        bufputs(piece->string, "SC: ");
-        piece->fold = 4;
-        piece->firAttr = A_BOLD;
-        tail->newline = FALSE;
-      }
-      else if (IS_NODE("h5", curNode->name)) {  //  * h5 as Points in Sub
+    if (cur_node->type == XML_ELEMENT_NODE) {
+      link->prop = (P_CONTROL | P_ATTR_ON);
+      tail = dom_link_new(NULL);
+      tail->prop = P_CONTROL;
 
-        bufputs(piece->string, "PT: ");
-        piece->fold = 5;
-        piece->firAttr = A_BOLD;
-        tail->newline = FALSE;
+      if (cmp_xml("body", cur_node->parent->name)) {
+        link->prop |= P_LINE_BREAK;
+        tail->prop |= P_LINE_BREAK;
       }
-      else if (IS_NODE("h6", curNode->name)) {  // * h6 as Sub of Points
-        bufputs(piece->string, "PS: ");
-        piece->fold = 6;
-        piece->firAttr = A_BOLD;
-        tail->newline = FALSE;
+      // if (cmp_xml("html", cur_node->name)) {
+      // }
+      // else if (cmp_xml("head", cur_node->name)) {
+      // }
+      // else if (cmp_xml("body", cur_node->name)) {
+      // }
+
+      if (cmp_xml("title", cur_node->name)) {
+        link->fold = 0;
+        tail->prop ^= P_LINE_BREAK;
       }
-      else if (IS_NODE("ul", curNode->name) || IS_NODE("ol", curNode->name)) {  // * unordered list
-        piece->fold += 3;
+      else if (cmp_xml("h1", cur_node->name)) {  //  * h1 as "NAME" .SH
+        bufputs(link->buf, "\rNAME");
+        link->buf_attr = node_attr[N_HEADING];
+        tail->prop ^= P_LINE_BREAK;
       }
-      else if (IS_NODE("li", curNode->name)) {  //  * list item
-        bufputs(piece->string, "\u00b7");
-        piece->newline = TRUE;
+      else if (cmp_xml("h2", cur_node->name)) {  //  * h2 for all other .SH
+        link->fold = 0;
+        link->buf_attr = node_attr[N_HEADING];
+        tail->prop ^= P_LINE_BREAK;
       }
-      else if (IS_NODE("p", curNode->name)) {  // * paragraph
-        piece->newline = tail->newline = TRUE;
+      else if (cmp_xml("h3", cur_node->name)) {  //  * h3 for .SS
+        link->fold = 3;
+        link->buf_attr = node_attr[N_HEADING];
+        tail->prop ^= P_LINE_BREAK;
       }
-      else if (IS_NODE("strong", curNode->name)) {  //  * bold
-        piece->firAttr = A_BOLD;
+      else if (cmp_xml("h4", cur_node->name)) {  //  * h4 as Sub of .SS
+        bufputs(link->buf, "SC: ");
+        link->fold = 4;
+        link->buf_attr = node_attr[N_HEADING];
+        tail->prop ^= P_LINE_BREAK;
       }
-      else if (IS_NODE("em", curNode->name)) {  //  * italic
-        piece->firAttr = A_ITALIC;
+      else if (cmp_xml("h5", cur_node->name)) {  //  * h5 as Points in Sub
+
+        bufputs(link->buf, "PT: ");
+        link->fold = 5;
+        link->buf_attr = node_attr[N_HEADING];
+        tail->prop ^= P_LINE_BREAK;
       }
-      else if (IS_NODE("ins", curNode->name)) {  // * underline (<u> not included)
-        piece->firAttr = A_UNDERLINE;
+      else if (cmp_xml("h6", cur_node->name)) {  // * h6 as Sub of Points
+        bufputs(link->buf, "PS: ");
+        link->fold = 6;
+        link->buf_attr = node_attr[N_HEADING];
+        tail->prop ^= P_LINE_BREAK;
       }
-      else if (IS_NODE("del", curNode->name)) {  // * strikethrough (<s> not included)
-        piece->firAttr = A_INVIS;
-        piece->secAttr = A_REVERSE;
+      else if (cmp_xml("ul", cur_node->name) || cmp_xml("ol", cur_node->name)) {  // * unordered list
+        link->fold += 3;
       }
-      else if (IS_NODE("kbd", curNode->name)) {  //  * keyboard key
-        piece->firAttr = A_DIM;
+      else if (cmp_xml("li", cur_node->name)) {  //  * list item
+        bufputs(link->buf, "\u00b7");
+        link->prop |= P_LINE_BREAK;
       }
-      else if (IS_NODE("code", curNode->name)) {  //  * codeblock
-        buffer = xmlBufferCreate();
-        xmlNodeDump(buffer, curNode->doc, curNode->children, 0, 0);
-        ret = xmlBufferContent(buffer);
-        bufputs(piece->string, (char *)ret);
-        piece->color = Yellow;
-        piece->firAttr = A_CHARTEXT;
-        piece->formated = TRUE;
-        COPY_ATTR(tail, piece);
-        piece->next = tail;
-        content_append(&head, &piece);
-        xmlFree(buffer);
-        continue;
+      else if (cmp_xml("p", cur_node->name)) {  // * paragraph
+        link->buf_attr = node_attr[N_PLAIN];
       }
-      else if (IS_NODE("a", curNode->name)) {  //  * hyperlink
-        piece->color = Blue;
-        piece->firAttr = A_UNDERLINE;
+      else if (cmp_xml("strong", cur_node->name) || cmp_xml("b", cur_node->name)) {  //  * bold
+        link->buf_attr = node_attr[N_STRONG];
       }
-      else if (IS_NODE("img", curNode->name)) {  //  * image
-        ret = GET_PROP(curNode, "alt");
-        bufput(piece->string, (char *)ret, strlen((char *)ret));
-        piece->color = Blue;
-        piece->firAttr = A_UNDERLINE;
+      else if (cmp_xml("em", cur_node->name) || cmp_xml("i", cur_node->name)) {  //  * italic
+        link->buf_attr = node_attr[N_EM];
       }
-      if (IS_NODE("a", curNode->parent->name) || IS_NODE("img", curNode->parent->name)) {
-        piece->color = Blue;
-        piece->firAttr = A_UNDERLINE;
-        piece->secAttr = A_NORMAL;
+      else if (cmp_xml("ins", cur_node->name) || cmp_xml("u", cur_node->name)) {  // * underline (<u> not included)
+        link->buf_attr = node_attr[N_INS];
       }
-      if (!piece->string->data) {
-        bufrelease(piece->string);
-        piece->string = NULL;
+      else if (cmp_xml("del", cur_node->name) || cmp_xml("s", cur_node->name)) {  // * strikethrough (<s> not included)
+        link->buf_attr = node_attr[N_DEL];
+      }
+      else if (cmp_xml("kbd", cur_node->name)) {  //  * keyboard key
+        link->buf_attr = node_attr[N_KBD];
+      }
+      else if (cmp_xml("pre", cur_node->name)) {  //  * codeblock
+        link->prop |= P_SELF_FORMAT | P_LINE_BREAK;
+        link->fold += 3;
+      }
+      else if (cmp_xml("code", cur_node->name)) {  //  * codeblock
+        link->buf_attr = node_attr[N_CODE];
+        link->prop |= P_SELF_FORMAT;
+      }
+      else if (cmp_xml("a", cur_node->name)) {  //  * hyperlink
+        link->buf_attr = node_attr[N_LINK];
+      }
+      else if (cmp_xml("img", cur_node->name)) {  //  * image
+        ret = get_prop(cur_node, "alt");
+        len = strlen((char *)ret);
+        bufput(link->buf, (char *)ret, len);
+        link->buf_attr = node_attr[N_LINK];
+      }
+
+      if (cmp_xml("a", cur_node->parent->name) || cmp_xml("img", cur_node->parent->name)) {
+        link->buf_attr = node_attr[N_LINK];
+      }
+      if (!link->buf->size) {
+        bufrelease(link->buf);
+        link->buf = NULL;
       }
     }
-    else if (curNode->type == XML_TEXT_NODE) {
-      ret = curNode->content;
-      if (!xmlStrEqual((xmlChar *)"\n", ret))
-        bufput(piece->string, (char *)ret, strlen((char *)ret));
-      else {
-        bufrelease(piece->string);
-        piece->string = NULL;
-      }
+    else if (cur_node->type == XML_TEXT_NODE) {
+      ret = cur_node->content;
+      bufput(link->buf, (char *)ret, strlen((char *)ret));
 
-      if (IS_NODE("h1", curNode->parent->name)) {
-        piece->newline = TRUE;
+      if (cmp_xml("h1", cur_node->parent->name)) {
+        link->prop = P_LINE_BREAK;
+      }
+      else if (cmp_xml("code", cur_node->parent->name)) {
+                link->prop |= P_SELF_FORMAT;
       }
     }
-    COPY_ATTR(tail, piece);
-    piece->next = get_content(curNode->children, piece->fold);
-    content_append(&head, &piece);
-    content_append(&head, &tail);
+    link->next = get_content(cur_node->children, link->fold);
+    dom_link_append(&head, link);
+    if (tail) {
+      tail->buf_attr  = link->buf_attr;
+      dom_link_append(&head, tail);
+      tail = tail->next;
+    }
+    cur_node = cur_node->next;
   }
 
   return head;
 }
 
-int view(const Config *configed, struct buf *ob, int blocks)
+int view(const Config *configed, struct buf *ob, int href_count)
 {
-  bool     update = TRUE;        /* control needs to update */
-  int      ymax, xmax;           /* dimension of stdscr */
-  int      key = 0, prevKey = 0; /* input key, previous key */
-  int      lineNum = 0;          /* cursor position on page */
-  Part *   page;                 /* content container */
-  Part *   status;               /* status line container */
-  Content *content;
-  xmlDoc * doc;
-  xmlNode *rootNode;
+  bool        update = TRUE; /* control needs to update */
+  int         height, width; /* dimension of stdscr */
+  int         key;           /* input key*/
+  int         prevKey = OK;  /* previous key */
+  struct frame_t *      page;          /* content container */
+  struct frame_t *      status;        /* status line container */
+  struct dom_link_t *   content;
+  htmlDocPtr  doc;
+  htmlNodePtr rootNode;
 
   LIBXML_TEST_VERSION;
 
   // * Grow DOM tree;
   doc = htmlReadMemory((char *)(ob->data), (int)(ob->size),
-                       "input markdown", NULL,
-                       HTML_PARSE_NOERROR | HTML_PARSE_NOWARNING);
+                       "input markdown", NULL, HTML_PARSE_NOBLANKS);
   if (!doc) {
     // sderror(strerror(errno));
     sderror("Failed to parse document");
@@ -375,56 +416,36 @@ int view(const Config *configed, struct buf *ob, int blocks)
 
   rootNode = xmlDocGetRootElement(doc);
   if (!rootNode) {
-    // sderror(strerror(errno));
     sderror("empty document");
     xmlFreeDoc(doc);
     return EXIT_FAILURE;
   }
-  content = get_content(rootNode, configed->lineFold);
+  bufreset(ob);
 
+  // if (href_count)
+  //   stack_init(&url, href_count);
+  content = get_content(rootNode, configed->lineFold);
   xmlFreeDoc(doc);
-  // * Initialize ncurses
+
   setlocale(LC_ALL, "");
-  initscr();
-  halfdelay(1);
+  initscr();            /* Initialize ncurses */
   noecho();             /* disable echo of keyboard typing */
   keypad(stdscr, TRUE); /* enable arrow keys */
-  curs_set(0);          /* disable cursor */
+  timeout(200);
+  cbreak();
+  // halfdelay(1);
+  curs_set(0);
 
-  if (has_colors()) {  // * Set color if terminal support
-    start_color();
-    use_default_colors();
+  create_color_pairs();
 
-    if (COLORS == 256) {  //  todo: 256 color mode
-      init_pair(Standard, -1, -1);
-      init_pair(Red, COLOR_RED, -1);
-      init_pair(Green, COLOR_GREEN, -1);
-      init_pair(Yellow, COLOR_YELLOW, -1);
-      init_pair(Blue, COLOR_BLUE, -1);
-      init_pair(Magenta, COLOR_MAGENTA, -1);
-      init_pair(Cyan, COLOR_CYAN, -1);
-      init_pair(White, COLOR_WHITE, -1);
-    }
-    else {  // * 8 color mode
-      init_pair(Standard, -1, -1);
-      init_pair(Red, COLOR_RED, -1);
-      init_pair(Green, COLOR_GREEN, -1);
-      init_pair(Yellow, COLOR_YELLOW, -1);
-      init_pair(Blue, COLOR_BLUE, -1);
-      init_pair(Magenta, COLOR_MAGENTA, -1);
-      init_pair(Cyan, COLOR_CYAN, -1);
-      init_pair(White, COLOR_WHITE, -1);
-    }
-  }
+  get_stdscr_size(height, width);
 
-  GET_SCREEN_SIZE(ymax, xmax);
-  page = part_new(blocks, xmax, 0, 0);
-  page->ctnr = newpad(page->height, page->width);
-
-  status = part_new(1, xmax, ymax, 0);
-  status->ctnr = newwin(status->height, status->width, status->curY, status->curX);
-  // scrollok(status->ctnr, TRUE);
-  wattrset(status->ctnr, A_REVERSE);
+  page        = frame_new(FRAME_NONE, 1, width, 0, 0);
+  page->win   = newpad(page->height, page->width);
+  status      = frame_new(FRAME_STAT, 1, width, height, 0);
+  status->win = newwin(status->height, status->width, status->cur_y, status->cur_x);
+  scrollok(status->win, TRUE);
+  wattrset(status->win, status->attr);
 
   refresh();
 
@@ -433,32 +454,53 @@ int view(const Config *configed, struct buf *ob, int blocks)
       case 'j':
       case ENTER:
       case KEY_DOWN: {
-        if (lineNum + ymax < page->height)
-          lineNum++;
+        if (page->cur_y + height < page->height)
+          page->cur_y++;
         break;
       }
+
       case 'k':
-      case KEY_BACKSPACE:
+      // case KEY_BACKSPACE:
       case KEY_UP: {
-        if (lineNum > 0)
-          lineNum--;
+        if (page->cur_y > 0)
+          page->cur_y--;
         break;
       }
+
+      case ' ':
+      case KEY_NPAGE: {
+        if (page->cur_y + ((height - 1) << 1) < page->height)
+          page->cur_y += (height - 1);
+        else
+          page->cur_y = page->height - height;
+        break;
+      }
+
+      case KEY_BACKSPACE:
+      case KEY_PPAGE: {
+        if (page->cur_y - (height - 1) > 0)
+          page->cur_y -= (height - 1);
+        else
+          page->cur_y = 0;
+        break;
+      }
+
       case KEY_RESIZE: {
         update = TRUE;
-        GET_SCREEN_SIZE(ymax, xmax);
+        get_stdscr_size(height, width);
+        page->width = status->width = width;
         break;
       }
-      case -1: {
+      case ERR: {
         if (update) {
-          key = 0;
+          key    = OK;
           update = !update;
           if (prevKey == KEY_RESIZE) {
             // page->height = blocks;
-            page->width = xmax;
-            wresize(page->ctnr, page->height, page->width);
-            wclear(page->ctnr);
-            mvwin(status->ctnr, ymax, 0);
+            wresize(page->win, page->height, page->width);
+            wresize(status->win, status->height, status->width);
+            wclear(page->win);
+            mvwin(status->win, height, 0);
           }
 
           render_content(page, content);
@@ -466,32 +508,32 @@ int view(const Config *configed, struct buf *ob, int blocks)
         break;
       }
       default:
-        key = -1;
+        key = ERR;
         break;
     }
-    if (key != -1) {
-      if (ymax >= page->height)
-        wprintw(status->ctnr, "\r Markdown page (ALL) (press q to quit)");
-      else if (lineNum <= 0)
-        wprintw(status->ctnr, "\r Markdown page (TOP) (press q to quit)");
-      else if (lineNum + ymax < page->height)
-        wprintw(status->ctnr, "\r Markdown page (%d%%) (press q to quit)", ((lineNum + ymax) * 100) / page->height);
+    if (key != ERR) {
+      if (height >= page->height)
+        wprintw(status->win, "\n%s(ALL) (q to quit)", frame_title[status->frame_type]);
+      else if (page->cur_y <= 0)
+        wprintw(status->win, "\n%s(TOP) (q to quit)", frame_title[status->frame_type]);
+      else if (page->cur_y + height < page->height)
+        wprintw(status->win, "\n%s(%d%%) (q to quit)", frame_title[status->frame_type], ((page->cur_y + height) * 100) / page->height);
       else
-        wprintw(status->ctnr, "\r Markdown page (END) (press q to quit)");
+        wprintw(status->win, "\n%s(END) (q to quit)", frame_title[status->frame_type]);
 
-      wnoutrefresh(status->ctnr);
-      pnoutrefresh(page->ctnr, lineNum, 0, 0, 0, ymax - 1, xmax);
+      pnoutrefresh(page->win, page->cur_y, 0, 0, 0, height - 1, width);
+      wnoutrefresh(status->win);
     }
     prevKey = key;
     doupdate();
   }
 
   //  Clean up
-  part_free(page);
-  part_free(status);
   endwin();
+  frame_free(page);
+  frame_free(status);
 
-  content_free(content);
+  dom_link_free(content);
 
   return EXIT_SUCCESS;
 }

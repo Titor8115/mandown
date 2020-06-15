@@ -13,43 +13,50 @@
 #include "markdown.h"
 #include "view.h"
 
-void sd_message(char *output)
+void sd_info(char *output)
 {
-  fprintf(stdout, "%s%snote: %s%s\n", "\033[1m", "\033[36m", "\033[0m",
-          output);
+  fprintf(stdout, "%snote: %s%s\n", "\033[36m", "\033[0m", output);
 }
 
 void sd_error(char *output)
 {
-  fprintf(stderr, "%s%serror: %s%s\n", "\033[1m", "\033[31m", "\033[0m",
-          output);
+  fprintf(stderr, "%serror: %s%s\n", "\033[31m", "\033[0m", output);
 }
 
-void sd_warning(char *output)
+void sd_warn(char *output)
 {
-  fprintf(stderr, "%s%swarning: %s%s\n", "\033[1m", "\033[33m", "\033[0m",
-          output);
+  fprintf(stderr, "%swarning: %s%s\n", "\033[33m", "\033[0m", output);
 }
 
 void usage()
 {
   fprintf(stdout, "%s\n", "mdn - Markdown Manual, a man(1) like markdown pager");
-  fprintf(stdout, "%s\n\n", "Usage: mdn [options...] <filename>");
+  fprintf(stdout, "%s\n\n", "Usage: mdn <filename> [options...]");
 
   fprintf(stdout, "%-20s%s\n", "  -f, --file", "optional flag for filepath");
-  fprintf(stdout, "%-20s%s\n\n", "  -h, --help", "this help text");
+  fprintf(stdout, "%-20s%s\n", "  -h, --help", "this help text");
+  fprintf(stdout, "%-20s%s\n\n", "  -o, --outpath", "xhtml version of input file");
 
   fprintf(stdout, "%s\n\n", "Pager control:");
 
-  fprintf(stdout, "%-20s%-10s%s\n", "  Scroll Up:", "\u2191", "  <arrow up>");
-  fprintf(stdout, "%-20s%-10s%s\n", "", "BACKSPACE", "<backspace>");
-  fprintf(stdout, "%-20s%-10s%s\n", "", "k", "<k>");
+  fprintf(stdout, "%-20s%-15s%s\n", "  Scroll Up:", "\u2191", "  <arrow up>");
+  fprintf(stdout, "%-20s%-15s%s\n", "", "BACKSPACE", "<backspace>");
+  fprintf(stdout, "%-20s%-15s%s\n\n", "", "k", "<k>");
 
-  fprintf(stdout, "%-20s%-10s%s\n", "  Scroll Down:", "\u2193", "  <arrow down>");
-  fprintf(stdout, "%-20s%-10s%s\n", "", "ENTER", "<enter>");
-  fprintf(stdout, "%-20s%-10s%s\n", "", "j", "<j>");
-  fprintf(stdout, "%-20s%-10s%s\n\n", "  Exit:", "q", "<q>");
-  fprintf(stdout, "%s", "It is still under development. Next featuring HTML render. Looking for co-work buddies!\n");
+  fprintf(stdout, "%-20s%-15s%s\n", "  Scroll Down:", "\u2193", "  <arrow down>");
+  fprintf(stdout, "%-20s%-15s%s\n", "", "ENTER", "<enter>");
+  fprintf(stdout, "%-20s%-15s%s\n\n", "", "j", "<j>");
+
+  fprintf(stdout, "%-20s%-15s%s\n", "  Page Up:", "fn + \u2191", "<function + arrow up>");
+  fprintf(stdout, "%-20s%-15s%s\n", "", "BACKSPACE", "<back space>");
+  fprintf(stdout, "%-20s%-15s%s\n\n", "", "pg up", "<page up>");
+
+  fprintf(stdout, "%-20s%-15s%s\n", "  Page Down:", "fn + \u2193", "<function + arrow down>");
+  fprintf(stdout, "%-20s%-15s%s\n", "", "SPACE", "<space bar>");
+  fprintf(stdout, "%-20s%-15s%s\n\n", "", "pg dn", "<page down>");
+
+  fprintf(stdout, "%-20s%-15s%s\n\n", "  Exit:", "q", "<q>");
+  fprintf(stdout, "%s", "HTML format is partly supported. TUI help page soon replace Pager control section\n");
 }
 
 Config *
@@ -59,7 +66,7 @@ config_new()
   ret = malloc(sizeof *ret);
 
   if (ret) {
-    ret->mode = PAGE_MODE;
+    ret->mode     = PAGE_MODE;
     ret->lineFold = LINE_FOLD;
   }
   return ret;
@@ -77,8 +84,10 @@ int main(int argc, char **argv)
   int                      opt;
   int                      ret;
   int                      pfd[2];
+  unsigned int             extensions = (MKDEXT_NO_INTRA_EMPHASIS | MKDEXT_TABLES |
+                                          MKDEXT_AUTOLINK | MKDEXT_STRIKETHROUGH);
   pid_t                    pid;
-  char *                   in = NULL;
+  char *                   in  = NULL;
   char *                   out = NULL;
   FILE *                   fp_in;
   FILE *                   fp_out;
@@ -92,7 +101,7 @@ int main(int argc, char **argv)
   /* Get current working directory */
   if (argc < 2) {
     usage();
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
 
   configure = config_new();
@@ -107,7 +116,7 @@ int main(int argc, char **argv)
         exit(EXIT_SUCCESS);
         break;
       case 'o':
-        out = optarg;
+        out             = optarg;
         configure->mode = FILE_MODE;
         break;
       case ':':
@@ -121,14 +130,18 @@ int main(int argc, char **argv)
         break;
     }
   }
-  for (int i = optind; i < argc; i++)
-    in = argv[optind];
 
-  if (!in)
+  if (!in) {
+    for (int i = optind; i < argc; i++)
+      in = argv[optind];
+  }
+  if (!in) {
+    sderror("No file is given");
     return EXIT_FAILURE;
+  }
 
   /* Reading file */
-  fp_in = fopen(in, "r");
+  fp_in = fopen(in, "r+");
   if (!fp_in) {
     sderror(strerror(errno));
     return EXIT_FAILURE;
@@ -146,19 +159,22 @@ int main(int argc, char **argv)
   ob = bufnew(OUTPUT_UNIT);
   bufprintf(ob, "<title >%s(7)</title>\n", in);
   sdblender_renderer(&callbacks, &options, 0);
-  markdown = sd_markdown_new(0, 16, &callbacks, &options);
+  markdown = sd_markdown_new(extensions, 16, &callbacks, &options);
   sd_markdown_render(ob, ib->data, ib->size, markdown);
   sd_markdown_free(markdown);
 
   bufrelease(ib);
+
 
   if (configure->mode) {  // * output to file
     if (!(fp_out = fopen(out, "w"))) {
       sderror(strerror(errno));
       return EXIT_FAILURE;
     }
-    else
-      fwrite((void *)ob->data, ob->size, 0, fp_out);
+    else {
+      fwrite((void *)ob->data, ob->size, 1, fp_out);
+      fclose(fp_out);
+    }
   }
   else if (!isatty(STDOUT_FILENO)) {  // * output to piped pager
     configure->mode = FILE_MODE;
@@ -177,7 +193,7 @@ int main(int argc, char **argv)
     }
   }
   else {  // * output to mandown pager
-    ret = view(configure, ob, blocks);
+    ret = view(configure, ob, href);
   }
 
   /* Clean up */

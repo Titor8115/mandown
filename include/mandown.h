@@ -13,6 +13,13 @@ extern "C" {
 
 #define LINE_FOLD 7
 
+typedef struct style Style;
+struct style {
+  int color;
+  int firAttr;
+  int secAttr;
+};
+
 typedef struct config Config;
 struct config {
   char mode;
@@ -21,13 +28,13 @@ struct config {
   // todo: add more setting
 };
 
-#define sdmessage(string) sd_message((char *)string)
+#define sdinfo(string) sd_info((char *)string)
 #define sderror(string)   sd_error((char *)string)
-#define sdwarning(string) sd_warning((char *)string)
+#define sdwarn(string) sd_warn((char *)string)
 
-extern void sd_message(char *);
+extern void sd_info(char *);
 extern void sd_error(char *);
-extern void sd_warning(char *);
+extern void sd_warn(char *);
 
 #ifdef __cplusplus
 }

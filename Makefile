@@ -50,6 +50,7 @@ LDFLAGS = -g -O3 $(OSFLAGS) -Wall -Werror
 SRC=\
 	src/mandown.o \
 	src/view.o \
+	src/dom.o \
 	parser/markdown.o \
 	parser/stack.o \
 	parser/buffer.o \

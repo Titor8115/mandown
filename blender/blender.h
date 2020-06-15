@@ -15,8 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef UPSKIRT_BLENDER_H
-#define UPSKIRT_BLENDER_H
+#ifndef UPSKIRT_HTML_H
+#define UPSKIRT_HTML_H
 
 #include <stdlib.h>
 
@@ -41,23 +41,23 @@ struct blender_renderopt {
 };
 
 typedef enum {
-	blender_SKIP_blender = (1 << 0),
-	blender_SKIP_STYLE = (1 << 1),
-	blender_SKIP_IMAGES = (1 << 2),
-	blender_SKIP_LINKS = (1 << 3),
-	blender_EXPAND_TABS = (1 << 4),
-	blender_SAFELINK = (1 << 5),
-	blender_TOC = (1 << 6),
-	blender_HARD_WRAP = (1 << 7),
-	blender_USE_BLENDER = (1 << 8),
-	blender_ESCAPE = (1 << 9),
-} blender_render_mode;
+	HTML_SKIP_HTML = (1 << 0),
+	HTML_SKIP_STYLE = (1 << 1),
+	HTML_SKIP_IMAGES = (1 << 2),
+	HTML_SKIP_LINKS = (1 << 3),
+	HTML_EXPAND_TABS = (1 << 4),
+	HTML_SAFELINK = (1 << 5),
+	HTML_TOC = (1 << 6),
+	HTML_HARD_WRAP = (1 << 7),
+	HTML_USE_XHTML = (1 << 8),
+	HTML_ESCAPE = (1 << 9),
+} HTML_render_mode;
 
 typedef enum {
-	blender_TAG_NONE = 0,
-	blender_TAG_OPEN,
-	blender_TAG_CLOSE,
-} blender_tag;
+	HTML_TAG_NONE = 0,
+	HTML_TAG_OPEN,
+	HTML_TAG_CLOSE,
+} HTML_tag;
 
 int
 sdblender_is_tag(const uint8_t *tag_data, size_t tag_size, const char *tagname);
@@ -68,7 +68,7 @@ sdblender_renderer(struct sd_callbacks *callbacks, struct blender_renderopt *opt
 extern void
 sdblender_toc_renderer(struct sd_callbacks *callbacks, struct blender_renderopt *options_ptr);
 
-extern int blocks;
+extern int href;
 
 #ifdef __cplusplus
 }

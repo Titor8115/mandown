@@ -25,16 +25,16 @@
 #include "houdini.h"
 #include "markdown.h"
 
-#define USE_BLENDER(opt) (opt->flags & blender_USE_BLENDER)
+#define USE_BLENDER(opt) (opt->flags & HTML_USE_XHTML)
 
-int blocks = 0;
+int href = 0;
 
 int sdblender_is_tag(const uint8_t *tag_data, size_t tag_size, const char *tagname) {
   size_t i;
   int closed = 0;
 
   if (tag_size < 3 || tag_data[0] != '<')
-    return blender_TAG_NONE;
+    return HTML_TAG_NONE;
 
   i = 1;
 
@@ -48,16 +48,16 @@ int sdblender_is_tag(const uint8_t *tag_data, size_t tag_size, const char *tagna
       break;
 
     if (tag_data[i] != *tagname)
-      return blender_TAG_NONE;
+      return HTML_TAG_NONE;
   }
 
   if (i == tag_size)
-    return blender_TAG_NONE;
+    return HTML_TAG_NONE;
 
   if (isspace(tag_data[i]) || tag_data[i] == '>')
-    return closed ? blender_TAG_CLOSE : blender_TAG_OPEN;
+    return closed ? HTML_TAG_CLOSE : HTML_TAG_OPEN;
 
-  return blender_TAG_NONE;
+  return HTML_TAG_NONE;
 }
 
 static inline void escape_blender(struct buf *ob, const uint8_t *source, size_t length) {
@@ -78,7 +78,7 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
   if (!link || !link->size)
     return 0;
 
-  if ((options->flags & blender_SAFELINK) != 0 &&
+  if ((options->flags & HTML_SAFELINK) != 0 &&
       !sd_autolink_issafe(link->data, link->size) &&
       type != MKDA_EMAIL)
     return 0;
@@ -108,7 +108,7 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
   }
 
   BUFPUTSL(ob, "</a>");
-  blocks++;
+  
   return 1;
 }  // * blocks counted
 
@@ -143,7 +143,7 @@ rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, v
     escape_blender(ob, text->data, text->size);
 
   BUFPUTSL(ob, "</code></pre>\n");
-  blocks++;
+  
 }  // * blocks counted
 
 static void
@@ -151,15 +151,15 @@ rndr_blockquote(struct buf *ob, const struct buf *text, void *opaque) {
   BUFPUTSL(ob, "<blockquote>\n");
   if (text) bufput(ob, text->data, text->size);
   BUFPUTSL(ob, "</blockquote>\n");
-  blocks++;
+  
 }  // * blocks counted
 
 static int
 rndr_codespan(struct buf *ob, const struct buf *text, void *opaque) {
   BUFPUTSL(ob, "<code>");
-  if (text) bufput(ob, text->data, text->size);
+  if (text) escape_blender(ob, text->data, text->size);
   BUFPUTSL(ob, "</code>");
-  blocks++;
+  
   return 1;
 }  // * blocks counted
 
@@ -198,7 +198,7 @@ static int
 rndr_linebreak(struct buf *ob, void *opaque) {
   struct blender_renderopt *options = opaque;
   bufputs(ob, USE_BLENDER(options) ? "<br/>\n" : "<br>\n");
-  blocks++;
+  
   return 1;
 }  // * blocks counted
 
@@ -206,21 +206,21 @@ static void
 rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque) {
   struct blender_renderopt *options = opaque;
 
-  if (options->flags & blender_TOC)
+  if (options->flags & HTML_TOC)
     bufprintf(ob, "<h%d id=\"toc_%d\">", level, options->toc_data.header_count++);
   else
     bufprintf(ob, "<h%d>", level);
 
   if (text) bufput(ob, text->data, text->size);
   bufprintf(ob, "</h%d>\n", level);
-  blocks++;
+  
 }  // * blocks counted
 
 static int
 rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const struct buf *content, void *opaque) {
   struct blender_renderopt *options = opaque;
 
-  if (link != NULL && (options->flags & blender_SAFELINK) != 0 && !sd_autolink_issafe(link->data, link->size))
+  if (link != NULL && (options->flags & HTML_SAFELINK) != 0 && !sd_autolink_issafe(link->data, link->size))
     return 0;
 
   BUFPUTSL(ob, "<a href=\"");
@@ -243,6 +243,7 @@ rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const
 
   if (content && content->size) bufput(ob, content->data, content->size);
   BUFPUTSL(ob, "</a>");
+  href++;
   return 1;
 }
 
@@ -251,7 +252,7 @@ rndr_list(struct buf *ob, const struct buf *text, int flags, void *opaque) {
   bufput(ob, flags & MKD_LIST_ORDERED ? "<ol>\n" : "<ul>\n", 5);
   if (text) bufput(ob, text->data, text->size);
   bufput(ob, flags & MKD_LIST_ORDERED ? "</ol>\n" : "</ul>\n", 6);
-  blocks++;
+  
 }  // * blocks counted
 
 static void
@@ -265,7 +266,7 @@ rndr_listitem(struct buf *ob, const struct buf *text, int flags, void *opaque) {
     bufput(ob, text->data, size);
   }
   BUFPUTSL(ob, "</li>\n");
-  blocks++;
+  
 }  // * blocks counted
 
 static void
@@ -282,7 +283,7 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque) {
     return;
 
   BUFPUTSL(ob, "<p>");
-  if (options->flags & blender_HARD_WRAP) {
+  if (options->flags & HTML_HARD_WRAP) {
     size_t org;
     while (i < text->size) {
       org = i;
@@ -306,7 +307,7 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque) {
     bufput(ob, &text->data[i], text->size - i);
   }
   BUFPUTSL(ob, "</p>\n");
-  blocks++;
+  
 }  // * blocks counted
 
 static void
@@ -320,7 +321,7 @@ rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque) {
   if (org >= sz) return;
   bufput(ob, text->data + org, sz - org);
   bufputc(ob, '\n');
-  blocks++;
+  
 }  // * blocks counted
 
 static int
@@ -336,7 +337,7 @@ static void
 rndr_hrule(struct buf *ob, void *opaque) {
   struct blender_renderopt *options = opaque;
   bufputs(ob, USE_BLENDER(options) ? "<hr/>\n" : "<hr>\n");
-  blocks++;
+  
 }  // * blocks counted
 
 static int
@@ -357,6 +358,7 @@ rndr_image(struct buf *ob, const struct buf *link, const struct buf *title, cons
   }
 
   bufputs(ob, "\"/>");
+  href++;
   return 1;
 }
 
@@ -364,25 +366,25 @@ static int
 rndr_raw_blender(struct buf *ob, const struct buf *text, void *opaque) {
   struct blender_renderopt *options = opaque;
 
-  /* blender_ESCAPE overrides SKIP_blender, SKIP_STYLE, SKIP_LINKS and SKIP_IMAGES
+  /* HTML_ESCAPE overrides SKIP_blender, SKIP_STYLE, SKIP_LINKS and SKIP_IMAGES
 	* It doens't see if there are any valid tags, just escape all of them. */
-  if ((options->flags & blender_ESCAPE) != 0) {
+  if ((options->flags & HTML_ESCAPE) != 0) {
     escape_blender(ob, text->data, text->size);
     return 1;
   }
 
-  if ((options->flags & blender_SKIP_blender) != 0)
+  if ((options->flags & HTML_SKIP_HTML) != 0)
     return 1;
 
-  if ((options->flags & blender_SKIP_STYLE) != 0 &&
+  if ((options->flags & HTML_SKIP_STYLE) != 0 &&
       sdblender_is_tag(text->data, text->size, "style"))
     return 1;
 
-  if ((options->flags & blender_SKIP_LINKS) != 0 &&
+  if ((options->flags & HTML_SKIP_LINKS) != 0 &&
       sdblender_is_tag(text->data, text->size, "a"))
     return 1;
 
-  if ((options->flags & blender_SKIP_IMAGES) != 0 &&
+  if ((options->flags & HTML_SKIP_IMAGES) != 0 &&
       sdblender_is_tag(text->data, text->size, "img"))
     return 1;
 
@@ -399,7 +401,6 @@ rndr_table(struct buf *ob, const struct buf *header, const struct buf *body, voi
   if (body)
     bufput(ob, body->data, body->size);
   BUFPUTSL(ob, "</tbody></table>\n");
-  blocks += 2;
 }
 
 static void
@@ -408,7 +409,7 @@ rndr_tablerow(struct buf *ob, const struct buf *text, void *opaque) {
   if (text)
     bufput(ob, text->data, text->size);
   BUFPUTSL(ob, "</tr>\n");
-  blocks++;
+  
 }  // * blocks counted
 
 static void
@@ -444,7 +445,7 @@ rndr_tablecell(struct buf *ob, const struct buf *text, int flags, void *opaque) 
   } else {
     BUFPUTSL(ob, "</td>\n");
   }
-  blocks++;
+  
 }  // * blocks counted
 
 static int
@@ -493,7 +494,7 @@ toc_header(struct buf *ob, const struct buf *text, int level, void *opaque) {
   if (text)
     escape_blender(ob, text->data, text->size);
   BUFPUTSL(ob, "</a>\n");
-  blocks++;
+  
 }  // * blocks not fixed
 
 static int
@@ -547,7 +548,7 @@ void sdblender_toc_renderer(struct sd_callbacks *callbacks, struct blender_rende
   };
 
   memset(options, 0x0, sizeof(struct blender_renderopt));
-  options->flags = blender_TOC;
+  options->flags = HTML_TOC;
 
   memcpy(callbacks, &cb_default, sizeof(struct sd_callbacks));
 }
@@ -592,14 +593,14 @@ void sdblender_renderer(struct sd_callbacks *callbacks, struct blender_renderopt
   /* Prepare the callbacks */
   memcpy(callbacks, &cb_default, sizeof(struct sd_callbacks));
 
-  if (render_flags & blender_SKIP_IMAGES)
+  if (render_flags & HTML_SKIP_IMAGES)
     callbacks->image = NULL;
 
-  if (render_flags & blender_SKIP_LINKS) {
+  if (render_flags & HTML_SKIP_LINKS) {
     callbacks->link = NULL;
     callbacks->autolink = NULL;
   }
 
-  if (render_flags & blender_SKIP_blender || render_flags & blender_ESCAPE)
+  if (render_flags & HTML_SKIP_HTML || render_flags & HTML_ESCAPE)
     callbacks->blockblender = NULL;
 }

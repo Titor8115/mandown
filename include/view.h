@@ -3,6 +3,7 @@
 
 #include <libxml/HTMLparser.h>
 #include <libxml/HTMLtree.h>
+#include <libxml/xmlstring.h>
 #include <libxml/xmlerror.h>
 
 #ifdef HAS_NCURSES_H
@@ -23,56 +24,39 @@ extern "C" {
 #define A_ITALIC NCURSES_BITS(1U, 23)
 #endif
 
-typedef struct contents Content;
-struct contents {
-  struct buf *string;
+#define cmp_xml(str, node)          xmlStrEqual((xmlChar *)str, (xmlChar *)node)
+#define get_prop(node, str)         xmlGetProp((xmlNode *)node, (xmlChar *)str)
+#define get_stdscr_size(y, x)       (y = getmaxy(stdscr) - 1, x = getmaxx(stdscr))
+#define update_size(part, y, x)     ((part)->height = y, (part)->width = x)
+#define get_frame_size(part, y, x)  (y = getmaxy((part)->win), x = getmaxx((part)->win))
+
+typedef struct content Content;
+struct content {
+  struct buf *buf;
   Content *   next;
   int         fold;
-  int         color;
-  int         firAttr;
-  int         secAttr;
-  bool        newline;
-  bool        togAttr;
-  bool        formated;
+  attr_t      attr;
+  uint8_t     prop;
 };
 
-typedef struct parts Part;
-struct parts {
-  WINDOW *ctnr;
+typedef struct frame Frame;
+struct frame {
+  WINDOW *win;
+  attr_t  attr;
+  int     frame_type;
   int     height;
   int     width;
-  int     curY;
-  int     curX;
+  int     beg_y;
+  int     beg_x;
+  int     cur_y;
+  int     cur_x;
 };
 
-typedef enum {
-  Standard,
-  Red,
-  Green,
-  Yellow,
-  Blue,
-  Magenta,
-  Cyan,
-  White,
-} Palette;
-
-#define IS_NODE(string, node) \
-  xmlStrEqual((xmlChar *)string, (xmlChar *)node)
-
-#define GET_PROP(node, string) \
-  xmlGetProp((xmlNodePtr)node, (xmlChar *)string)
-
-#define ARRANGE(parts, content) \
-  render_content(parts, content)
-
-#define GET_SCREEN_SIZE(y, x) \
-  (y = getmaxy(stdscr) - 1, x = getmaxx(stdscr))
-
-#define TOG_ATTR(win, toggle, content) \
-  toggle_attr(win, toggle, content->color, content->firAttr, content->secAttr)
-
-#define COPY_ATTR(dest, source) \
-  (dest->color = source->color, dest->firAttr = source->firAttr, dest->secAttr = source->secAttr)
+struct url {
+  struct buf * title;
+  struct buf * link;
+  struct part *ctnr;
+};
 
 extern int view(const Config *, struct buf *, int);
 // void          formatHandler(struct text *, struct parts *);

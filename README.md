@@ -6,13 +6,13 @@ A man-page inspired Markdown pager written in C.
 
 ## What is it
 
-Need to lookup things from README? Or from manual page? Or perhaps just want to install something cool... (**Looking for work buddies**)
+Need to lookup things from README? Or from manual page? Or perhaps just want to install something cool...
 
 ## Update
 
-**Resizing** smoothly! (wait for 0.1s then render)
+**Control:** Page up, Page down
 
-**Line Wrap** fully optimized.
+**Outfile:** for input file in XHTML
 
 ## Sample
 
@@ -56,9 +56,13 @@ $ mdn sample.md
 
 Mouse wheel scrolling is supported! (if your terminal emulator allows)
 
-Scroll Up: <kbd>↑</kbd>, <kbd>k</kbd>, <kbd>BACKSPACE</kbd>
+Scroll Up: <kbd>↑</kbd>, <kbd>k</kbd>
 
-Scroll Down: <kbd>↓</kbd>, <kbd>j</kbd>, <kbd>ENTER</kbd>
+Scroll Down: <kbd>↓</kbd>, <kbd>j</kbd>, <kbd>enter</kbd>
+
+Page Up: <kbd>space bar</kbd>,  <kbd>pg up</kbd>, <kbd>fn + ↑</kbd>
+
+Page Down:  <kbd>back space</kbd>,  <kbd>pg down</kbd>, <kbd>fn + ↓</kbd>
 
 Exit: <kbd>q</kbd>
 
