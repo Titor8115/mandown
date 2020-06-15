@@ -42,6 +42,12 @@ ifeq ($(UNAME_S),Darwin)
 	DEFINE := -D HAS_NCURSES_H
 endif
 
+ifeq ($(UNAME_S),Linux)
+    CURSES := ncurses
+    OSFLAGS :=
+    DEFINE := -D HAS_NCURSES_H
+endif
+
 LDLIB = -l$(CURSES) -lxml2
 CFLAGS = -c -g -O3 -Wall -Wsign-compare -Iparser -Iblender -Iinclude -I/usr/include/libxml2 $(DEFINE)
 LDFLAGS = -g -O3 $(OSFLAGS) -Wall -Werror
