@@ -122,9 +122,10 @@ int main(int argc, char **argv)
       case ':':
         if (optopt == 'f')
           sderror("No file is given");
-        if (optopt == 'o')
-          sderror("No path is given for output");
-        exit(EXIT_FAILURE);
+        if (optopt == 'o') {
+          out = "/dev/stdout";
+          configure->mode = FILE_MODE;
+        }
         break;
       default:
         break;
