@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <panel.h>
 
 #include "buffer.h"
 #include "stack.h"
