@@ -6,54 +6,29 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "buffer.h"
-#include "stack.h"
 #include "dom.h"
-
-
-
-enum
-{
-  C_DEFAULT = 0,
-  C_RED,
-  C_GREEN,
-  C_YELLOW,
-  C_BLUE,
-  C_MAGENTA,
-  C_CYAN,
-
-  C_MAX,
-};
+#include "stack.h"
 
 /* Available colors: BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE */
-static const struct { short fg; short bg; } color_pairs[] =
+static const struct {short fg; short bg;} color_pairs[] =
 {
-  /* color */     /* foreground*/ /* background*/
-  [C_DEFAULT]   = { -1,                     -1 },
-  [C_RED]       = { COLOR_RED,              -1 },
-  [C_GREEN]     = { COLOR_GREEN,            -1 },
-  [C_YELLOW]    = { COLOR_YELLOW,           -1 },
-  [C_BLUE]      = { COLOR_BLUE,             -1 },
-  [C_MAGENTA]   = { COLOR_MAGENTA,          -1 },
-  [C_CYAN]      = { COLOR_CYAN,             -1 },
-};
-
-enum
-{
-  FRAME_NONE,
-  FRAME_HELP,
-  FRAME_STAT,
-  FRAME_PAGE,
-  FRAME_HREF,
+  /* color */   /* foreground*/ /* background*/
+  [C_DEFAULT] = {-1,                        -1},
+  [C_RED]     = {COLOR_RED,                 -1},
+  [C_GREEN]   = {COLOR_GREEN,               -1},
+  [C_YELLOW]  = {COLOR_YELLOW,              -1},
+  [C_BLUE]    = {COLOR_BLUE,                -1},
+  [C_MAGENTA] = {COLOR_MAGENTA,             -1},
+  [C_CYAN]    = {COLOR_CYAN,                -1},
 };
 
 static const char frame_title[][19] =
 {
-  [FRAME_NONE]    = "",
-  [FRAME_HELP]    = " Help ",
-  [FRAME_PAGE]    = " struct dom_link_t ",
-  [FRAME_STAT]    = " Markdown page ",
-  [FRAME_HREF]    = " Reference ",
+  [FRAME_NONE]  = "",
+  [FRAME_HELP]  = " Help ",
+  [FRAME_PAGE]  = " struct dom_link ",
+  [FRAME_STATS] = " Markdown page ",
+  [FRAME_PROBE] = " Reference ",
 };
 
 static const attr_t frame_attr[] =
@@ -61,47 +36,21 @@ static const attr_t frame_attr[] =
   [FRAME_NONE]    = A_NORMAL,
   [FRAME_HELP]    = A_NORMAL,
   [FRAME_PAGE]    = A_NORMAL,
-  [FRAME_STAT]    = A_REVERSE,
-  [FRAME_HREF]    = A_REVERSE,
+  [FRAME_STATS]    = A_REVERSE,
+  [FRAME_PROBE]    = A_REVERSE,
 };
 
-enum {
-  N_PLAIN = 0,
-  N_EM,
-  N_STRONG,
-  N_INS,
-  N_DEL,
-  N_CODE,
-  N_KBD,
-
-  N_HEADING,
-  N_LINK
-};
-
-static const attr_t node_attr[] =
+static const struct {short pr; attr_t at;} node_attr[] =
 {
-  [N_EM]        = A_ITALIC,
-  [N_STRONG]    = A_BOLD,
-  [N_INS]       = A_UNDERLINE,
-  [N_DEL]       = A_INVIS     | A_REVERSE,
-  [N_CODE]      = A_NORMAL    | COLOR_PAIR(C_YELLOW),
-  [N_KBD]       = A_DIM,
-
-  [N_HEADING]   = A_BOLD,
-  [N_LINK]      = A_UNDERLINE | COLOR_PAIR(C_BLUE),
-};
-
-
-struct frame_t {
-  WINDOW *win;
-  attr_t  attr;
-  int     frame_type;
-  int     height;
-  int     width;
-  int     beg_y;
-  int     beg_x;
-  int     cur_y;
-  int     cur_x;
+  [N_PLAIN]   = {P_REGULAR | P_SPLIT,                             A_NORMAL},
+  [N_EM]      = {P_CONTROL,                                       A_ITALIC},
+  [N_BOLD]    = {P_CONTROL,                                         A_BOLD},
+  [N_INS]     = {P_CONTROL,                                    A_UNDERLINE},
+  [N_DEL]     = {P_CONTROL,                            A_INVIS | A_REVERSE},
+  [N_PRE]     = {P_CONTROL | P_SELF_FORM | P_SPLIT,               A_NORMAL},
+  [N_KBD]     = {P_CONTROL,                                          A_DIM},
+  [N_HEADING] = {P_CONTROL,                                         A_BOLD},
+  [N_HREF]    = {P_CONTROL | P_HYPERLINK, A_UNDERLINE | COLOR_PAIR(C_BLUE)},
 };
 
 static void
@@ -119,14 +68,14 @@ create_color_pairs()
   }
 }
 
-struct frame_t *
+struct frame *
 frame_new(int type, int height, int width, int begin_y, int begin_x)
 {
-  struct frame_t *ret;
-  ret = malloc(sizeof(struct frame_t));
+  struct frame *ret;
+  ret = malloc(sizeof(struct frame));
 
   if (ret) {
-    ret->win      = NULL;
+    ret->win        = NULL;
     ret->attr       = frame_attr[type];
     ret->frame_type = type;
     ret->height     = height;
@@ -137,8 +86,7 @@ frame_new(int type, int height, int width, int begin_y, int begin_x)
   return ret;
 }
 
-void
-frame_free(struct frame_t *part)
+void frame_free(struct frame *part)
 {
   if (!part)
     return;
@@ -153,7 +101,7 @@ toggle_attr(WINDOW *dest, int toggle, int attributes)
 }
 
 static void
-move_cursor(struct frame_t *part, int cur_y, int cur_x)
+move_cursor(struct frame *part, int cur_y, int cur_x)
 {
   if (!part->win)
     return;
@@ -172,39 +120,45 @@ move_cursor(struct frame_t *part, int cur_y, int cur_x)
 }
 
 static void
-render_content(struct frame_t *dest, struct dom_link_t *ib)
+render_content(struct frame *dest, struct dom_link *ib, struct stack *href_table)
 {
-  int      cur_y = 0;
-  int      cur_x = 0;
-  int      len;
-  size_t   position;
-  char *   toc = " \n";
-  char *   out;
-  char *   string = NULL;
-  struct dom_link_t *ob;
+  int                    cur_y = 0;
+  int                    cur_x = 0;
+  int                    len;
+  size_t                 stack_pos = 0;
+  size_t                 position;
+  char *                 toc = " \n";
+  char *                 out;
+  char *                 tmp = malloc(sizeof(char) * OUTPUT_UNIT);
+  struct dom_link *      ob;
+  struct dom_href_stack *href = NULL;
 
   for (ob = ib; ob != NULL; ob = ob->next) {
     if (ob->prop & P_CONTROL) {
-      toggle_attr(dest->win, (ob->prop & P_ATTR_ON), ob->buf_attr);
-      toc = (ob->prop & P_SELF_FORMAT) ? "\n" : " \n";
+      toggle_attr(dest->win, (ob->prop & P_BEG_A), ob->attr);
+      toc = (ob->prop & P_SELF_FORM) ? "\n" : " \n";
+
+      if ((ob->prop & P_HYPERLINK) && (ob->prop &  P_BEG_A)) {
+        href        = href_table->item[stack_pos];
+        stack_pos++;
+      }
     }
 
-    if (ob->prop & P_LINE_BREAK) {
+    if (ob->prop & P_SPLIT) {
       // cur_x = ob->fold;
-      move_cursor(dest, ++cur_y, cur_x = 0);
+      move_cursor(dest, ++cur_y, cur_x = ob->fold);
     }
-
 
     if (!ob->buf)
       continue;
     else {
-      string = calloc(ob->buf->size + 1, sizeof(char));
-      strncpy(string, (char *)ob->buf->data, ob->buf->size);
+      tmp = realloc(tmp, ob->buf->size + 1);
+      // tmp = calloc(ob->buf->size + 1, sizeof(char));
+      memcpy(tmp, ob->buf->data, ob->buf->size + 1);
     }
 
-
     position = 0;
-    out = strtok(string, toc);
+    out      = strtok(tmp, toc);
     while (out != NULL) {
       len = strlen(out);
 
@@ -212,13 +166,19 @@ render_content(struct frame_t *dest, struct dom_link_t *ib)
 
       if ((cur_x > ob->fold) && (cur_x + len >= dest->width)) {
         cur_x = ob->fold;
-        cur_y ++;
+        cur_y++;
         move_cursor(dest, cur_y + (len + ob->fold) / dest->width, cur_x);
       }
+        if (href != NULL) {
+        href->beg_y = cur_y;
+        href->beg_x = cur_x;
+        // href->index = stack_pos;
+        href = NULL;
+        }
 
       waddnstr(dest->win, out, len);
-      // j += len;
       getyx(dest->win, cur_y, cur_x);
+      // j += len;
       position += len;
       if (position < ob->buf->size) {
         if (toc[0] == '\n') {
@@ -232,43 +192,41 @@ render_content(struct frame_t *dest, struct dom_link_t *ib)
       }
       else
         move_cursor(dest, cur_y, ++cur_x);
-      
+
       position++;
 
       out = strtok(NULL, toc);
     }
-
-    if (string)
-      free(string);
   }
-  if (dest->height >= cur_y) {
+  free(tmp);
+
+  if (dest->height != cur_y) {
     dest->height = cur_y + 1;
     wresize(dest->win, dest->height, dest->width);
   }
 }
 
-struct dom_link_t *
-get_content(xmlNode *node, int fold)
+struct dom_link *
+get_content(xmlNode *node, int fold, struct stack *href_table)
 {
-  size_t             len;
-  struct dom_link_t *link;
-  struct dom_link_t *head     = NULL;
-  struct dom_link_t *tail     = NULL;
-  htmlNodePtr        cur_node = node;
-  const xmlChar *    ret;
+  struct dom_href_stack *href;
+  struct dom_link *      link;
+  struct dom_link *      head = NULL;
+  struct dom_link *      tail = NULL;
+  htmlNodePtr            cur_node;
+  xmlChar *              xml_prop;
 
-  while (cur_node != NULL) {
-    link = dom_link_new(bufnew(OUTPUT_UNIT));
+  for (cur_node = node; cur_node != NULL; cur_node = cur_node->next) {
+    link       = dom_link_new(bufnew(OUTPUT_UNIT));
     link->fold = fold;
-
     if (cur_node->type == XML_ELEMENT_NODE) {
-      link->prop = (P_CONTROL | P_ATTR_ON);
-      tail = dom_link_new(NULL);
+      link->prop = P_BEG_A;
+      tail       = dom_link_new(NULL);
       tail->prop = P_CONTROL;
 
       if (cmp_xml("body", cur_node->parent->name)) {
-        link->prop |= P_LINE_BREAK;
-        tail->prop |= P_LINE_BREAK;
+        link->prop |= P_SPLIT;
+        tail->prop |= P_SPLIT;
       }
       // if (cmp_xml("html", cur_node->name)) {
       // }
@@ -279,152 +237,192 @@ get_content(xmlNode *node, int fold)
 
       if (cmp_xml("title", cur_node->name)) {
         link->fold = 0;
-        tail->prop ^= P_LINE_BREAK;
+        tail->prop |= P_SPLIT;
       }
       else if (cmp_xml("h1", cur_node->name)) {  //  * h1 as "NAME" .SH
         bufputs(link->buf, "\rNAME");
-        link->buf_attr = node_attr[N_HEADING];
-        tail->prop ^= P_LINE_BREAK;
+        link->attr |= node_attr[N_HEADING].at;
+        link->prop |= node_attr[N_HEADING].pr;
+        tail->prop ^= P_SPLIT;
       }
       else if (cmp_xml("h2", cur_node->name)) {  //  * h2 for all other .SH
         link->fold = 0;
-        link->buf_attr = node_attr[N_HEADING];
-        tail->prop ^= P_LINE_BREAK;
+        link->attr |= node_attr[N_HEADING].at;
+        link->prop |= node_attr[N_HEADING].pr;
+        tail->prop ^= P_SPLIT;
       }
       else if (cmp_xml("h3", cur_node->name)) {  //  * h3 for .SS
         link->fold = 3;
-        link->buf_attr = node_attr[N_HEADING];
-        tail->prop ^= P_LINE_BREAK;
+        link->attr |= node_attr[N_HEADING].at;
+        link->prop |= node_attr[N_HEADING].pr;
+        tail->prop ^= P_SPLIT;
       }
       else if (cmp_xml("h4", cur_node->name)) {  //  * h4 as Sub of .SS
         bufputs(link->buf, "SC: ");
         link->fold = 4;
-        link->buf_attr = node_attr[N_HEADING];
-        tail->prop ^= P_LINE_BREAK;
+        link->attr |= node_attr[N_HEADING].at;
+        link->prop |= node_attr[N_HEADING].pr;
+        tail->prop ^= P_SPLIT;
       }
       else if (cmp_xml("h5", cur_node->name)) {  //  * h5 as Points in Sub
 
         bufputs(link->buf, "PT: ");
         link->fold = 5;
-        link->buf_attr = node_attr[N_HEADING];
-        tail->prop ^= P_LINE_BREAK;
+        link->attr |= node_attr[N_HEADING].at;
+        link->prop |= node_attr[N_HEADING].pr;
+        tail->prop ^= P_SPLIT;
       }
       else if (cmp_xml("h6", cur_node->name)) {  // * h6 as Sub of Points
         bufputs(link->buf, "PS: ");
         link->fold = 6;
-        link->buf_attr = node_attr[N_HEADING];
-        tail->prop ^= P_LINE_BREAK;
+        link->attr |= node_attr[N_HEADING].at;
+        link->prop |= node_attr[N_HEADING].pr;
+        tail->prop ^= P_SPLIT;
       }
       else if (cmp_xml("ul", cur_node->name) || cmp_xml("ol", cur_node->name)) {  // * unordered list
-        link->fold += 3;
+        link->fold += 2;
       }
       else if (cmp_xml("li", cur_node->name)) {  //  * list item
         bufputs(link->buf, "\u00b7");
-        link->prop |= P_LINE_BREAK;
+        link->prop |= P_SPLIT;
       }
       else if (cmp_xml("p", cur_node->name)) {  // * paragraph
-        link->buf_attr = node_attr[N_PLAIN];
+        link->attr |= node_attr[N_PLAIN].at;
+        // link->prop |= node_attr[N_PLAIN].pr;
       }
       else if (cmp_xml("strong", cur_node->name) || cmp_xml("b", cur_node->name)) {  //  * bold
-        link->buf_attr = node_attr[N_STRONG];
+        link->attr |= node_attr[N_BOLD].at;
+        link->prop |= node_attr[N_BOLD].pr;
       }
-      else if (cmp_xml("em", cur_node->name) || cmp_xml("i", cur_node->name)) {  //  * italic
-        link->buf_attr = node_attr[N_EM];
+      else if (cmp_xml("em", cur_node->name) ||
+               cmp_xml("i", cur_node->name)) {  //  * italic
+        link->attr |= node_attr[N_EM].at;
+        link->prop |= node_attr[N_EM].pr;
       }
-      else if (cmp_xml("ins", cur_node->name) || cmp_xml("u", cur_node->name)) {  // * underline (<u> not included)
-        link->buf_attr = node_attr[N_INS];
+      else if (cmp_xml("ins", cur_node->name) ||
+               cmp_xml("u", cur_node->name)) {  // * underline
+        link->attr |= node_attr[N_INS].at;
+        link->prop |= node_attr[N_INS].pr;
       }
-      else if (cmp_xml("del", cur_node->name) || cmp_xml("s", cur_node->name)) {  // * strikethrough (<s> not included)
-        link->buf_attr = node_attr[N_DEL];
+      else if (cmp_xml("del", cur_node->name) ||
+               cmp_xml("s", cur_node->name)) {  // * strikethrough
+        link->attr |= node_attr[N_DEL].at;
+        link->prop |= node_attr[N_DEL].pr;
       }
       else if (cmp_xml("kbd", cur_node->name)) {  //  * keyboard key
-        link->buf_attr = node_attr[N_KBD];
+        link->attr |= node_attr[N_KBD].at;
+        link->prop |= node_attr[N_KBD].pr;
       }
       else if (cmp_xml("pre", cur_node->name)) {  //  * codeblock
-        link->prop |= P_SELF_FORMAT | P_LINE_BREAK;
-        link->fold += 3;
+        link->prop |= P_SELF_FORM | P_SPLIT;
+        link->fold += 2;
       }
       else if (cmp_xml("code", cur_node->name)) {  //  * codeblock
-        link->buf_attr = node_attr[N_CODE];
-        link->prop |= P_SELF_FORMAT;
+        link->attr |= node_attr[N_PRE].at | COLOR_PAIR(C_YELLOW);
+        link->prop |= node_attr[N_PRE].pr ^ P_SPLIT;
       }
       else if (cmp_xml("a", cur_node->name)) {  //  * hyperlink
-        link->buf_attr = node_attr[N_LINK];
+        link->attr |= node_attr[N_HREF].at;
+        link->prop |= node_attr[N_HREF].pr;
+
+        xml_prop = get_prop(cur_node, "href");
+        if (xml_prop != NULL) {
+          href = dom_href_new(bufnew(OUTPUT_UNIT));
+          href->index = href_table->size - 1;
+          bufputs(href->url, (char *)xml_prop);
+          stack_push(href_table, href);
+        }
+        xmlFree(xml_prop);
       }
       else if (cmp_xml("img", cur_node->name)) {  //  * image
-        ret = get_prop(cur_node, "alt");
-        len = strlen((char *)ret);
-        bufput(link->buf, (char *)ret, len);
-        link->buf_attr = node_attr[N_LINK];
+        link->attr |= node_attr[N_HREF].at;
+        link->prop |= node_attr[N_HREF].pr;
+        xml_prop = get_prop(cur_node, "alt");
+        if (xml_prop != NULL) {
+          bufputs(link->buf, (char *)xml_prop);
+        }
+        xml_prop = get_prop(cur_node, "src");
+        if (xml_prop != NULL) {
+          href = dom_href_new(bufnew(OUTPUT_UNIT));
+          href->index = href_table->size - 1;
+          bufputs(href->url, (char *)xml_prop);
+          stack_push(href_table, href);
+        }
+        xmlFree(xml_prop);
       }
 
-      if (cmp_xml("a", cur_node->parent->name) || cmp_xml("img", cur_node->parent->name)) {
-        link->buf_attr = node_attr[N_LINK];
-      }
-      if (!link->buf->size) {
-        bufrelease(link->buf);
-        link->buf = NULL;
+      if (cmp_xml("a", cur_node->parent->name) ||
+          cmp_xml("img", cur_node->parent->name)) {  //  * style overwrite if is href content
+        link->attr |= node_attr[N_HREF].at;
       }
     }
     else if (cur_node->type == XML_TEXT_NODE) {
-      ret = cur_node->content;
-      bufput(link->buf, (char *)ret, strlen((char *)ret));
+      link->prop = node_attr[N_PLAIN].at;
+      bufputs(link->buf, (char *)cur_node->content);
 
       if (cmp_xml("h1", cur_node->parent->name)) {
-        link->prop = P_LINE_BREAK;
-      }
-      else if (cmp_xml("code", cur_node->parent->name)) {
-                link->prop |= P_SELF_FORMAT;
+        link->prop |= P_SPLIT;
+        link->fold = fold;
       }
     }
-    link->next = get_content(cur_node->children, link->fold);
+
+    if (link->buf->size == 0) {
+      bufrelease(link->buf);
+      link->buf = NULL;
+    }
+    else
+      bufcstr(link->buf);
+    link->next = get_content(cur_node->children, link->fold, href_table);
     dom_link_append(&head, link);
+
     if (tail) {
-      tail->buf_attr  = link->buf_attr;
+      tail->attr = link->attr;
       dom_link_append(&head, tail);
       tail = tail->next;
     }
-    cur_node = cur_node->next;
   }
 
   return head;
 }
 
-int view(const Config *configed, struct buf *ob, int href_count)
+int view(const struct config *config, const struct buf *ob, int href_count)
 {
-  bool        update = TRUE; /* control needs to update */
-  int         height, width; /* dimension of stdscr */
-  int         key;           /* input key*/
-  int         prevKey = OK;  /* previous key */
-  struct frame_t *      page;          /* content container */
-  struct frame_t *      status;        /* status line container */
-  struct dom_link_t *   content;
-  htmlDocPtr  doc;
-  htmlNodePtr rootNode;
+  int                    ret    = 0;
+  bool                   update = TRUE; /* control needs to update */
+  int                    height, width; /* dimension of stdscr */
+  int                    key;           /* input key*/
+  int                    prevKey = OK;  /* previous key */
+  int                    stack_index = 0;
+  struct frame_main      mdn     = {NULL, NULL, 0, 0, 0, 0};
+  struct frame *         page;   /* content container */
+  struct frame *         status; /* status line container */
+  struct frame *         probe = NULL;
+  struct dom_link *      content;
+  htmlDocPtr             doc;
+  htmlNodePtr            rootNode;
+  struct stack           ref_stack;
+  struct dom_href_stack *test;
+  // MEVENT            event;
 
   LIBXML_TEST_VERSION;
 
   // * Grow DOM tree;
   doc = htmlReadMemory((char *)(ob->data), (int)(ob->size),
-                       "input markdown", NULL, HTML_PARSE_NOBLANKS);
+                       "file", NULL, HTML_PARSE_NOBLANKS | HTML_PARSE_NOWARNING | HTML_PARSE_RECOVER);
   if (!doc) {
-    // sderror(strerror(errno));
-    sderror("Failed to parse document");
-    return EXIT_FAILURE;
+    sderror(&ret, "Failed to make sense of given file as HTML");
+    return ret;
   }
 
   rootNode = xmlDocGetRootElement(doc);
   if (!rootNode) {
-    sderror("empty document");
     xmlFreeDoc(doc);
-    return EXIT_FAILURE;
+    sderror(&ret, "empty document");
+    return ret;
   }
-  bufreset(ob);
 
-  // if (href_count)
-  //   stack_init(&url, href_count);
-  content = get_content(rootNode, configed->lineFold);
-  xmlFreeDoc(doc);
+  stack_init(&ref_stack, href_count);
+  content = get_content(rootNode, config->fold, &ref_stack);
 
   setlocale(LC_ALL, "");
   initscr();            /* Initialize ncurses */
@@ -433,25 +431,58 @@ int view(const Config *configed, struct buf *ob, int href_count)
   timeout(200);
   cbreak();
   // halfdelay(1);
-  curs_set(0);
+  // curs_set(0);
 
   create_color_pairs();
 
-  get_stdscr_size(height, width);
+  get_display_size(height, width);
 
-  page        = frame_new(FRAME_NONE, 1, width, 0, 0);
+  page        = frame_new(FRAME_NONE, (int)ob->size / width, width, 0, 0);
   page->win   = newpad(page->height, page->width);
-  status      = frame_new(FRAME_STAT, 1, width, height, 0);
+
+  status      = frame_new(FRAME_STATS, 1, width, height, 0);
   status->win = newwin(status->height, status->width, status->cur_y, status->cur_x);
   scrollok(status->win, TRUE);
   wattrset(status->win, status->attr);
 
+  probe        = frame_new(FRAME_NONE, 4, width, height - 4, 0);
+  probe->win   = newwin(probe->height, probe->width, probe->beg_y, probe->beg_x);
+  probe->cur_y = probe->cur_x = 1;
+
+  mdn.pad = page;
+  mdn.bar = status;
+  render_content(page, content, &ref_stack);
+
   refresh();
+  // mousemask(ALL_MOUSE_EVENTS, NULL);
 
   while ((key = getch()) != 'q') {
     switch (key) {
+      // case KEY_MOUSE:
+      //   if (getmouse(&event) == OK) {
+      //     if (event.bstate & BUTTON1_PRESSED)
+      //   }
+      case TAB: {
+          test = dom_stack_find(&ref_stack, stack_index, page->cur_y, page->cur_y + height, page->cur_x);
+          stack_index = test->index + 1;
+          if (test != NULL) {
+            mdn.cur_y = test->beg_y - page->cur_y;
+            mdn.cur_x = test->beg_x - page->cur_x;
+            move(mdn.cur_y, mdn.cur_x);
+          }
+        break;
+      }
+      case ENTER: {
+        if (test != NULL) {
+          mvwprintw(probe->win, probe->cur_y, probe->cur_x, (char *)test->url->data);
+          wclrtobot(probe->win);
+        }
+        box(probe->win, 0, 0);
+        mvwprintw(probe->win, probe->cur_y - 1, 2, frame_title[FRAME_PROBE]);
+
+        break;
+      }
       case 'j':
-      case ENTER:
       case KEY_DOWN: {
         if (page->cur_y + height < page->height)
           page->cur_y++;
@@ -486,23 +517,24 @@ int view(const Config *configed, struct buf *ob, int href_count)
 
       case KEY_RESIZE: {
         update = TRUE;
-        get_stdscr_size(height, width);
-        page->width = status->width = width;
+        get_display_size(height, width);
+        mvwin(status->win, height, 0);
+        mvwin(probe->win, height - 4, 0);
+
         break;
       }
       case ERR: {
         if (update) {
-          key    = OK;
           update = !update;
+          key    = OK;
           if (prevKey == KEY_RESIZE) {
-            // page->height = blocks;
-            wresize(page->win, page->height, page->width);
-            wresize(status->win, status->height, status->width);
-            wclear(page->win);
-            mvwin(status->win, height, 0);
+              page->width = width;
+              // page->height = blocks;
+              wresize(page->win, page->height, page->width);
+              // wresize(status->win, status->height, status->width);
+              wclear(page->win);
+              render_content(page, content, &ref_stack);
           }
-
-          render_content(page, content);
         }
         break;
       }
@@ -511,30 +543,35 @@ int view(const Config *configed, struct buf *ob, int href_count)
         break;
     }
     if (key != ERR) {
-      if (height >= page->height)
-        wprintw(status->win, "\n%s(ALL) (q to quit)", frame_title[status->frame_type]);
-      else if (page->cur_y <= 0)
-        wprintw(status->win, "\n%s(TOP) (q to quit)", frame_title[status->frame_type]);
-      else if (page->cur_y + height < page->height)
-        wprintw(status->win, "\n%s(%d%%) (q to quit)", frame_title[status->frame_type], ((page->cur_y + height) * 100) / page->height);
-      else
-        wprintw(status->win, "\n%s(END) (q to quit)", frame_title[status->frame_type]);
-
-      pnoutrefresh(page->win, page->cur_y, 0, 0, 0, height - 1, width);
-      wnoutrefresh(status->win);
+      if (key == ENTER) {
+        mdn.bar = probe;
+      }
+      else {
+        if (mdn.bar != status) mdn.bar = status;
+        if (height >= page->height)
+          wprintw(status->win, "\n%s(ALL) (q to quit)", frame_title[status->frame_type]);
+        else if (page->cur_y <= 0)
+          wprintw(status->win, "\n%s(TOP) (q to quit)", frame_title[status->frame_type]);
+        else if (page->cur_y + height < page->height)
+          wprintw(status->win, "\n%s(%d%%) (q to quit)", frame_title[status->frame_type], ((page->cur_y + height) * 100) / page->height);
+        else
+          wprintw(status->win, "\n%s(END) (q to quit)", frame_title[status->frame_type]);
+      }
+      pnoutrefresh(page->win, page->cur_y, 0, 0, 0, height - mdn.bar->height, width);
+      wnoutrefresh(mdn.bar->win);
     }
     prevKey = key;
     doupdate();
   }
-
   //  Clean up
   endwin();
   frame_free(page);
   frame_free(status);
-
+  frame_free(probe);
+  dom_stack_free(&ref_stack);
   dom_link_free(content);
-
-  return EXIT_SUCCESS;
+  xmlFreeDoc(doc);
+  return ret;
 }
 
 /* vim: set filetype=c: */

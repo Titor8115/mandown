@@ -10,9 +10,7 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 ## Update
 
-**Control:** Page up, Page down
-
-**Outfile:** for input file in XHTML
+- hyperlink support: <kbd>tab</kbd> cycle href on screen, <kbd>enter</kbd> to show actual link
 
 ## Sample
 
@@ -58,11 +56,13 @@ Mouse wheel scrolling is supported! (if your terminal emulator allows)
 
 Scroll Up: <kbd>↑</kbd>, <kbd>k</kbd>
 
-Scroll Down: <kbd>↓</kbd>, <kbd>j</kbd>, <kbd>enter</kbd>
+Scroll Down: <kbd>↓</kbd>, <kbd>j</kbd>
 
 Page Up: <kbd>space bar</kbd>,  <kbd>pg up</kbd>, <kbd>fn + ↑</kbd>
 
 Page Down:  <kbd>back space</kbd>,  <kbd>pg down</kbd>, <kbd>fn + ↓</kbd>
+
+Select & Get href: <kbd>tab</kbd> & <kbd>enter</kbd>
 
 Exit: <kbd>q</kbd>
 

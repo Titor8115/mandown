@@ -21,6 +21,7 @@ int stack_push(struct stack *, void *);
 
 void *stack_pop(struct stack *);
 void *stack_top(struct stack *);
+void *stack_bot(struct stack *);
 
 #ifdef __cplusplus
 }

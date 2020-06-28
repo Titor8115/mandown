@@ -366,7 +366,7 @@ static int
 rndr_raw_blender(struct buf *ob, const struct buf *text, void *opaque) {
   struct blender_renderopt *options = opaque;
 
-  /* HTML_ESCAPE overrides SKIP_blender, SKIP_STYLE, SKIP_LINKS and SKIP_IMAGES
+  /* HTML_ESCAPE overrides SKIP_HTML, SKIP_STYLE, SKIP_LINKS and SKIP_IMAGES
 	* It doens't see if there are any valid tags, just escape all of them. */
   if ((options->flags & HTML_ESCAPE) != 0) {
     escape_blender(ob, text->data, text->size);

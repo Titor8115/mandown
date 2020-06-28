@@ -51,13 +51,13 @@ typedef enum {
 	HTML_HARD_WRAP = (1 << 7),
 	HTML_USE_XHTML = (1 << 8),
 	HTML_ESCAPE = (1 << 9),
-} HTML_render_mode;
+} html_render_mode;
 
 typedef enum {
 	HTML_TAG_NONE = 0,
 	HTML_TAG_OPEN,
 	HTML_TAG_CLOSE,
-} HTML_tag;
+} html_tag;
 
 int
 sdblender_is_tag(const uint8_t *tag_data, size_t tag_size, const char *tagname);

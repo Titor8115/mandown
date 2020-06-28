@@ -79,3 +79,11 @@ stack_top(struct stack *st)
 	return st->item[st->size - 1];
 }
 
+void *
+stack_bot(struct stack *st)
+{
+	if (!st->size)
+		return NULL;
+
+	return st->item[0];
+}

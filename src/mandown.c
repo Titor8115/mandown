@@ -5,21 +5,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
+
+#ifdef DEBUG
 #include <unistd.h>
+#endif
 
 #include "blender.h"
-#include "buffer.h"
 #include "markdown.h"
-#include "view.h"
 
 void sd_info(char *output)
 {
   fprintf(stdout, "%snote: %s%s\n", "\033[36m", "\033[0m", output);
 }
 
-void sd_error(char *output)
+void sd_error(int *ret, char *output)
 {
+  (*ret) = 1;
   fprintf(stderr, "%serror: %s%s\n", "\033[31m", "\033[0m", output);
 }
 
@@ -31,7 +32,7 @@ void sd_warn(char *output)
 void usage()
 {
   fprintf(stdout, "%s\n", "mdn - Markdown Manual, a man(1) like markdown pager");
-  fprintf(stdout, "%s\n\n", "Usage: mdn <filename> [options...]");
+  fprintf(stdout, "%s\n\n", "Usage: mdn <title> [options...]");
 
   fprintf(stdout, "%-20s%s\n", "  -f, --file", "optional flag for filepath");
   fprintf(stdout, "%-20s%s\n", "  -h, --help", "this help text");
@@ -40,11 +41,9 @@ void usage()
   fprintf(stdout, "%s\n\n", "Pager control:");
 
   fprintf(stdout, "%-20s%-15s%s\n", "  Scroll Up:", "\u2191", "  <arrow up>");
-  fprintf(stdout, "%-20s%-15s%s\n", "", "BACKSPACE", "<backspace>");
   fprintf(stdout, "%-20s%-15s%s\n\n", "", "k", "<k>");
 
   fprintf(stdout, "%-20s%-15s%s\n", "  Scroll Down:", "\u2193", "  <arrow down>");
-  fprintf(stdout, "%-20s%-15s%s\n", "", "ENTER", "<enter>");
   fprintf(stdout, "%-20s%-15s%s\n\n", "", "j", "<j>");
 
   fprintf(stdout, "%-20s%-15s%s\n", "  Page Up:", "fn + \u2191", "<function + arrow up>");
@@ -55,48 +54,71 @@ void usage()
   fprintf(stdout, "%-20s%-15s%s\n", "", "SPACE", "<space bar>");
   fprintf(stdout, "%-20s%-15s%s\n\n", "", "pg dn", "<page down>");
 
+  fprintf(stdout, "%-20s%-15s%s\n", "  Select href:", "TAB", "<tab>");
+  fprintf(stdout, "%-20s%-15s%s\n", "  Get href link:", "ENTER", "<enter>");
+
   fprintf(stdout, "%-20s%-15s%s\n\n", "  Exit:", "q", "<q>");
   fprintf(stdout, "%s", "HTML format is partly supported. TUI help page soon replace Pager control section\n");
 }
 
-Config *
+static struct config setting = {
+    PAGE_MODE,
+    LINE_FOLD,
+};
+
+struct config *
 config_new()
 {
-  Config *ret;
+  struct config *ret;
   ret = malloc(sizeof *ret);
 
   if (ret) {
-    ret->mode     = PAGE_MODE;
-    ret->lineFold = LINE_FOLD;
+    ret->mode = PAGE_MODE;
+    ret->fold = LINE_FOLD;
   }
   return ret;
 }
 
-void config_free(Config *configure)
+void config_free(struct config *config)
 {
-  if (!configure)
+  if (!config)
     return;
-  free(configure);
+  free(config);
+}
+
+static const char *
+get_file_ext(const char *file, const char ext)
+{
+  const char *dot = strrchr(file, ext);
+  if (!dot || dot == file) return "";
+  return dot + 1;
 }
 
 int main(int argc, char **argv)
 {
-  int                      opt;
-  int                      ret;
-  int                      pfd[2];
-  unsigned int             extensions = (MKDEXT_NO_INTRA_EMPHASIS | MKDEXT_TABLES |
-                                          MKDEXT_AUTOLINK | MKDEXT_STRIKETHROUGH);
-  pid_t                    pid;
-  char *                   in  = NULL;
-  char *                   out = NULL;
+#ifdef DEBUG
+
+  int   pfd[2];
+  pid_t pid;
+
+#endif
+  int          ret = 0;
+  int          opt;
+  unsigned int extensions = MKDEXT_NO_INTRA_EMPHASIS |
+                             MKDEXT_TABLES |
+                             MKDEXT_AUTOLINK |
+                             MKDEXT_STRIKETHROUGH;
+  const char *             in  = NULL;
+  const char *             out = NULL;
+  const char *             ext;
+  const char *             title;
   FILE *                   fp_in;
   FILE *                   fp_out;
-  Config *                 configure;
   struct buf *             ib;
   struct buf *             ob;
+  struct sd_markdown *     markdown;
   struct sd_callbacks      callbacks;
   struct blender_renderopt options;
-  struct sd_markdown *     markdown;
 
   /* Get current working directory */
   if (argc < 2) {
@@ -104,7 +126,7 @@ int main(int argc, char **argv)
     return EXIT_FAILURE;
   }
 
-  configure = config_new();
+  // config = config_new();
 
   while ((opt = getopt(argc, argv, ":f:ho:")) != -1) {
     switch (opt) {
@@ -116,15 +138,17 @@ int main(int argc, char **argv)
         exit(EXIT_SUCCESS);
         break;
       case 'o':
-        out             = optarg;
-        configure->mode = FILE_MODE;
+        out          = optarg;
+        setting.mode = FILE_MODE;
         break;
       case ':':
-        if (optopt == 'f')
-          sderror("No file is given");
+        if (optopt == 'f') {
+          sderror(&ret, "No file is given");
+          return ret;
+        }
         if (optopt == 'o') {
-          out = "/dev/stdout";
-          configure->mode = FILE_MODE;
+          out          = "/dev/stdout";
+          setting.mode = FILE_MODE;
         }
         break;
       default:
@@ -137,15 +161,14 @@ int main(int argc, char **argv)
       in = argv[optind];
   }
   if (!in) {
-    sderror("No file is given");
-    return EXIT_FAILURE;
+    sderror(&ret, "No file is given");
+    return ret;
   }
-
-  /* Reading file */
-  fp_in = fopen(in, "r+");
+    /* Reading file */
+    fp_in = fopen(in, "r+");
   if (!fp_in) {
-    sderror(strerror(errno));
-    return EXIT_FAILURE;
+    sderror(&ret, strerror(errno));
+    return ret;
   }
 
   ib = bufnew(READ_UNIT);
@@ -156,29 +179,40 @@ int main(int argc, char **argv)
   }
   fclose(fp_in);
 
-  /* Prepare for nodeHandler */
+  title = get_file_ext(in, '/');
+  ext   = get_file_ext(in, '.');
+  if (((strncmp(ext, "", 1)) == 0) || (strcmp(title, "")) == 0) {
+    title = in;
+  }
+  else if ((strcmp(ext, "html")) == 0) {
+    ob = ib;
+    goto prepare_render;
+  }
   ob = bufnew(OUTPUT_UNIT);
-  bufprintf(ob, "<title >%s(7)</title>\n", in);
   sdblender_renderer(&callbacks, &options, 0);
+  bufprintf(ob, "<html><head><title >%s(7)</title></head><body>", in);
   markdown = sd_markdown_new(extensions, 16, &callbacks, &options);
   sd_markdown_render(ob, ib->data, ib->size, markdown);
+  bufputs(ob, "</body></html>\n");
   sd_markdown_free(markdown);
-
   bufrelease(ib);
 
-
-  if (configure->mode) {  // * output to file
+/* Prepare for parsing */
+prepare_render:
+  if (setting.mode) {  // * output to file
     if (!(fp_out = fopen(out, "w"))) {
-      sderror(strerror(errno));
-      return EXIT_FAILURE;
+      sderror(&ret, strerror(errno));
+      goto clean_up;
     }
     else {
       fwrite((void *)ob->data, ob->size, 1, fp_out);
       fclose(fp_out);
     }
   }
+#ifdef DEBUG
+
   else if (!isatty(STDOUT_FILENO)) {  // * output to piped pager
-    configure->mode = FILE_MODE;
+    config.mode = FILE_MODE;
 
     pid = pipe(pfd);
     if (pid < 0) {
@@ -193,12 +227,16 @@ int main(int argc, char **argv)
     else {
     }
   }
+
+#endif
+
   else {  // * output to mandown pager
-    ret = view(configure, ob, href);
+    ret = view(&setting, ob, href);
   }
 
   /* Clean up */
+clean_up:
   bufrelease(ob);
-  config_free(configure);
+  // config_free(config);
   return ret;
 }

@@ -6,40 +6,59 @@
 #include <libxml/xmlstring.h>
 #include <libxml/xmlerror.h>
 
-#ifdef HAS_NCURSES_H
-#include <ncurses.h>
-#else
-#include <ncursesw/ncurses.h>
-#endif
-
-#include "buffer.h"
+#include "st_curses.h"
 #include "mandown.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define ENTER 10
-#ifndef A_ITALIC
-#define A_ITALIC NCURSES_BITS(1U, 23)
-#endif
-
 #define cmp_xml(str, node)          xmlStrEqual((xmlChar *)str, (xmlChar *)node)
 #define get_prop(node, str)         xmlGetProp((xmlNode *)node, (xmlChar *)str)
-#define get_stdscr_size(y, x)       (y = getmaxy(stdscr) - 1, x = getmaxx(stdscr))
 #define update_size(part, y, x)     ((part)->height = y, (part)->width = x)
 #define get_frame_size(part, y, x)  (y = getmaxy((part)->win), x = getmaxx((part)->win))
 
-typedef struct content Content;
-struct content {
-  struct buf *buf;
-  Content *   next;
-  int         fold;
-  attr_t      attr;
-  uint8_t     prop;
+enum color_set {
+  C_DEFAULT = 0,
+  C_RED,
+  C_GREEN,
+  C_YELLOW,
+  C_BLUE,
+  C_MAGENTA,
+  C_CYAN,
+
+  C_MAX,
 };
 
-typedef struct frame Frame;
+enum frame_type {
+  FRAME_NONE = 0,
+  FRAME_HELP,
+  FRAME_STATS,
+  FRAME_PAGE,
+  FRAME_PROBE,
+};
+
+typedef enum {
+  N_PLAIN = 0,
+  N_EM,
+  N_BOLD,
+  N_INS,
+  N_DEL,
+  N_PRE,
+  N_KBD,
+
+  N_HEADING,
+  N_HREF
+} node_t;
+
+struct content {
+  struct buf *    buf;
+  struct content *next;
+  int             fold;
+  attr_t          attr;
+  uint8_t         prop;
+};
+
 struct frame {
   WINDOW *win;
   attr_t  attr;
@@ -52,13 +71,15 @@ struct frame {
   int     cur_x;
 };
 
-struct url {
-  struct buf * title;
-  struct buf * link;
-  struct part *ctnr;
+struct frame_main {
+  struct frame* pad;
+  struct frame* bar;
+  int     height;
+  int     width;
+  int     cur_y;
+  int     cur_x;
 };
 
-extern int view(const Config *, struct buf *, int);
 // void          formatHandler(struct text *, struct parts *);
 // struct text * nodeHandler(xmlNode *, int);  /* set rendering rule for node  */
 // struct parts *partsNew(int, int, int, int); /* allocate new WINDOW and its information */

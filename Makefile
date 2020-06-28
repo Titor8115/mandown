@@ -43,7 +43,7 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 LDLIB = -l$(CURSES) -lxml2
-CFLAGS = -c -g -O3 -Wall -Wsign-compare -Iparser -Iblender -Iinclude -I/usr/include/libxml2 $(DEFINE)
+CFLAGS = -c -g -Wall -Wsign-compare -Iparser -Iblender -I/usr/include/libxml2 $(DEFINE)
 LDFLAGS = -g -O3 $(OSFLAGS) -Wall -Werror
 # CC = gcc
 

@@ -1,6 +1,8 @@
 #ifndef MDN_MANDOWN_H
 #define MDN_MANDOWN_H
 
+#include "buffer.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -11,30 +13,26 @@ extern "C" {
 #define PAGE_MODE 0
 #define FILE_MODE 1
 
+#define USE_COLOR 1
 #define LINE_FOLD 7
-
-typedef struct style Style;
-struct style {
-  int color;
-  int firAttr;
-  int secAttr;
-};
 
 typedef struct config Config;
 struct config {
-  char mode;
-  int  lineFold;
+  char         mode;
+  int          fold;
   // FILE *fp_out;
   // todo: add more setting
 };
 
-#define sdinfo(string) sd_info((char *)string)
-#define sderror(string)   sd_error((char *)string)
-#define sdwarn(string) sd_warn((char *)string)
+#define sdinfo(string)  sd_info((char *)string)
+#define sderror(ret, string) sd_error(ret, (char *)string)
+#define sdwarn(string)  sd_warn((char *)string)
 
 extern void sd_info(char *);
-extern void sd_error(char *);
+extern void sd_error(int *, char *);
 extern void sd_warn(char *);
+
+extern int view(const Config *, const struct buf *, int);
 
 #ifdef __cplusplus
 }
