@@ -10,7 +10,7 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 ## Update
 
-- hyperlink support: <kbd>tab</kbd> cycle href on screen, <kbd>enter</kbd> to show actual link
+- hyperlink support: <kbd>tab</kbd> cycle through href on screen, <kbd>enter</kbd> to show actual link
 
 ## Sample
 
