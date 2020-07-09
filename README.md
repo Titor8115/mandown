@@ -75,11 +75,17 @@ Mandown requires `libncurses(w)` and `libxml2` as compile-time dependencies.
 Make sure you have them installed before compiling.
 
 ### Homebrew
+**From source**
 
 ```shell
 $ brew install ncurses
 $ brew install libxml2-dev
 ```
+**Precompiled binary**
+```shell
+$ brew install mandown
+```
+
 
 ### Debian
 
