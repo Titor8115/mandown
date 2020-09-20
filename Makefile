@@ -62,10 +62,8 @@ LIBS      = $(NCURSES_LIBS) $(XML2_LIBS)
 # OS-specific additions
 ifeq ($(UNAME_S),Darwin)
 NCURSES   = ncurses
-DEFINES  += -D HAS_NCURSES_H
 else
 NCURSES   = ncursesw
-DEFINES  += -D HAS_NCURSESW_H
 LDFLAGS  += -Wl,--copy-dt-needed-entries
 endif
 

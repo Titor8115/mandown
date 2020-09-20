@@ -1,4 +1,4 @@
-#ifdef HAS_NCURSES_H
+#if __has_include(<ncurses.h>)
 #include <ncurses.h>
 #else
 #include <ncursesw/ncurses.h>
