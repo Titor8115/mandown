@@ -1,6 +1,5 @@
 .vscode/
-*.o
 mandown
 test/
-depends/
+build/
 mdn
