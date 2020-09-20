@@ -498,6 +498,7 @@ int view(const struct config *config, const struct buf *ob, int href_count)
       }
 
       case ' ':
+      case 'f':
       case KEY_NPAGE: {
         if (page->cur_y + ((height - 1) << 1) < page->height)
           page->cur_y += (height - 1);
@@ -507,6 +508,7 @@ int view(const struct config *config, const struct buf *ob, int href_count)
       }
 
       case KEY_BACKSPACE:
+      case 'b':
       case KEY_PPAGE: {
         if (page->cur_y - (height - 1) > 0)
           page->cur_y -= (height - 1);
