@@ -58,9 +58,9 @@ Scroll Up: <kbd>↑</kbd>, <kbd>k</kbd>
 
 Scroll Down: <kbd>↓</kbd>, <kbd>j</kbd>
 
-Page Up: <kbd>space bar</kbd>,  <kbd>pg up</kbd>, <kbd>fn + ↑</kbd>
+Page Up: <kbd>space bar</kbd>,  <kbd>pg up</kbd>, <kbd>fn + ↑</kbd>a, <kbd>b</kbd>
 
-Page Down:  <kbd>back space</kbd>,  <kbd>pg down</kbd>, <kbd>fn + ↓</kbd>
+Page Down:  <kbd>back space</kbd>,  <kbd>pg down</kbd>, <kbd>fn + ↓</kbd>, <kbd>f</kbd>
 
 Select & Get href: <kbd>tab</kbd> & <kbd>enter</kbd>
 
