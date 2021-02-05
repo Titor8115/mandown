@@ -13,6 +13,9 @@
 extern "C" {
 #endif
 
+#define WHEEL_UP 0x00080000
+#define WHEEL_DOWN 0x08000000
+
 #define cmp_xml(str, node)          xmlStrEqual((xmlChar *)str, (xmlChar *)node)
 #define get_prop(node, str)         xmlGetProp((xmlNode *)node, (xmlChar *)str)
 #define update_size(part, y, x)     ((part)->height = y, (part)->width = x)

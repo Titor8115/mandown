@@ -36,8 +36,8 @@ static const attr_t frame_attr[] =
   [FRAME_NONE]    = A_NORMAL,
   [FRAME_HELP]    = A_NORMAL,
   [FRAME_PAGE]    = A_NORMAL,
-  [FRAME_STATS]    = A_REVERSE,
-  [FRAME_PROBE]    = A_REVERSE,
+  [FRAME_STATS]   = A_REVERSE,
+  [FRAME_PROBE]   = A_REVERSE,
 };
 
 static const struct {short pr; attr_t at;} node_attr[] =
@@ -68,6 +68,18 @@ create_color_pairs()
   }
 }
 
+static inline void
+scroll_up(struct frame *page)
+{
+  if (page->cur_y > 0) page->cur_y--;
+}
+static inline void
+scroll_down(struct frame *page)
+{
+  int height = getmaxy(stdscr) - 1;
+  if (page->cur_y + height < page->height) page->cur_y++;
+}
+
 struct frame *
 frame_new(int type, int height, int width, int begin_y, int begin_x)
 {
@@ -80,8 +92,8 @@ frame_new(int type, int height, int width, int begin_y, int begin_x)
     ret->frame_type = type;
     ret->height     = height;
     ret->width      = width;
-    ret->beg_y = ret->cur_y = begin_y;
-    ret->beg_x = ret->cur_x = begin_x;
+    ret->beg_y      = ret->cur_y = begin_y;
+    ret->beg_x      = ret->cur_x = begin_x;
   }
   return ret;
 }
@@ -385,6 +397,7 @@ get_content(xmlNode *node, int fold, struct stack *href_table)
   return head;
 }
 
+
 int view(const struct config *config, const struct buf *ob, int href_count)
 {
   int                    ret    = 0;
@@ -401,8 +414,8 @@ int view(const struct config *config, const struct buf *ob, int href_count)
   htmlDocPtr             doc;
   htmlNodePtr            rootNode;
   struct stack           ref_stack;
-  struct dom_href_stack *test;
-  // MEVENT            event;
+  struct dom_href_stack *link = NULL;
+  MEVENT                 event;
 
   LIBXML_TEST_VERSION;
 
@@ -430,6 +443,7 @@ int view(const struct config *config, const struct buf *ob, int href_count)
   keypad(stdscr, TRUE); /* enable arrow keys */
   timeout(200);
   cbreak();
+  mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
   // halfdelay(1);
   // curs_set(0);
 
@@ -454,49 +468,51 @@ int view(const struct config *config, const struct buf *ob, int href_count)
   render_content(page, content, &ref_stack);
 
   refresh();
-  // mousemask(ALL_MOUSE_EVENTS, NULL);
 
   while ((key = getch()) != 'q') {
     switch (key) {
-      // case KEY_MOUSE:
-      //   if (getmouse(&event) == OK) {
-      //     if (event.bstate & BUTTON1_PRESSED)
-      //   }
-      case TAB: {
-          test = dom_stack_find(&ref_stack, stack_index, page->cur_y, page->cur_y + height, page->cur_x);
-          stack_index = test->index + 1;
-          if (test != NULL) {
-            mdn.cur_y = test->beg_y - page->cur_y;
-            mdn.cur_x = test->beg_x - page->cur_x;
+      case KEY_MOUSE:
+        if (getmouse(&event) == OK) {
+          if (event.bstate & WHEEL_UP)
+            goto key_up;
+          else if (event.bstate & WHEEL_DOWN)
+            goto key_down;
+          else if (event.bstate & BUTTON1_DOUBLE_CLICKED) {
+            page->cur_y += event.y;
+            goto tab_find;
+          }
+          break;
+        }
+      case TAB: {  tab_find:
+          link = dom_stack_find(&ref_stack, stack_index, page->cur_y, page->cur_y + height, event.x);
+          stack_index = link->index + 1;
+
+          if (link != NULL) {
+            mdn.cur_y = link->beg_y - page->cur_y;
+            mdn.cur_x = link->beg_x - page->cur_x;
             move(mdn.cur_y, mdn.cur_x);
           }
         break;
       }
       case ENTER: {
-        if (test != NULL) {
-          mvwprintw(probe->win, probe->cur_y, probe->cur_x, (char *)test->url->data);
+        if (link != NULL) {
+          mvwprintw(probe->win, probe->cur_y, probe->cur_x, (char *)link->url->data);
           wclrtobot(probe->win);
         }
         box(probe->win, 0, 0);
         mvwprintw(probe->win, probe->cur_y - 1, 2, frame_title[FRAME_PROBE]);
-
         break;
       }
       case 'j':
-      case KEY_DOWN: {
-        if (page->cur_y + height < page->height)
-          page->cur_y++;
+      case KEY_DOWN: {  key_down:
+        scroll_down(page);
         break;
       }
-
       case 'k':
-      // case KEY_BACKSPACE:
-      case KEY_UP: {
-        if (page->cur_y > 0)
-          page->cur_y--;
+      case KEY_UP: {  key_up:
+        scroll_up(page);
         break;
       }
-
       case ' ':
       case 'f':
       case KEY_NPAGE: {

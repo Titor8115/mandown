@@ -10,7 +10,9 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 ## Update
 
-- hyperlink support: <kbd>tab</kbd> cycle through href on screen, <kbd>enter</kbd> to show actual link
+- Mouse: other key are in progress
+  - enable mouse_1 select href 
+  - correct mouse wheel for scrolling.
 
 ## Sample
 
@@ -19,6 +21,17 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 ## Installation
 
 Current version is still being developed for some HTML tags. However, it should work on most Markdown documents.
+
+<table>
+  <tr>
+    <th>Month</th>
+    <th>Savings</th>
+  </tr>
+  <tr>
+    <td>January</td>
+    <td>$100</td>
+  </tr>
+</table>
 
 The installed binary `mdn` would be at `/usr/local/bin/`
 
@@ -62,7 +75,7 @@ Page Up: <kbd>space bar</kbd>,  <kbd>pg up</kbd>, <kbd>fn + ↑</kbd>a, <kbd>b</
 
 Page Down:  <kbd>back space</kbd>,  <kbd>pg down</kbd>, <kbd>fn + ↓</kbd>, <kbd>f</kbd>
 
-Select & Get href: <kbd>tab</kbd> & <kbd>enter</kbd>
+Select & Get href: <kbd>tab</kbd> or double click <kbd>mouse 1</kbd> & <kbd>enter</kbd>
 
 Exit: <kbd>q</kbd>
 
@@ -97,7 +110,6 @@ $ apt-get install libxml2-dev
 
 ## Todo
 
-- [ ] Piping capability
 - [x] Line fold/wrap on white space
 - [x] Optimized resizing
 - [ ] Table and contents rendering

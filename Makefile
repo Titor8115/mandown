@@ -63,7 +63,7 @@ LIBS      = $(NCURSES_LIBS) $(XML2_LIBS)
 ifeq ($(UNAME_S),Darwin)
 NCURSES   = ncurses
 else
-NCURSES   = ncursesw
+NCURSES   = ncurses
 LDFLAGS  += -Wl,--copy-dt-needed-entries
 endif
 

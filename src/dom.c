@@ -124,7 +124,8 @@ dom_stack_find(struct stack *st, size_t start, int mincol, int maxcol, int x)
   for (i = start; i < st->size; i++) {
     tmp = st->item[i];
     if ((mincol <= tmp->beg_y) && (tmp->beg_y <= maxcol) && (tmp != st->item[start])) {
-      return tmp;
+      if (x == tmp->beg_x)
+        return tmp;
     }
   }
 
