@@ -22,17 +22,6 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 Current version is still being developed for some HTML tags. However, it should work on most Markdown documents.
 
-<table>
-  <tr>
-    <th>Month</th>
-    <th>Savings</th>
-  </tr>
-  <tr>
-    <td>January</td>
-    <td>$100</td>
-  </tr>
-</table>
-
 The installed binary `mdn` would be at `/usr/local/bin/`
 
 ```shell
