@@ -22,6 +22,11 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 Current version is still being developed for some HTML tags. However, it should work on most Markdown documents.
 
+### Homebrew
+```
+$ brew install mandown
+```
+
 The installed binary `mdn` would be at `/usr/local/bin/`
 
 ```shell
