@@ -15,7 +15,3 @@ jobs:
     - uses: actions/checkout@v2
     - name: make
       run: make
-    - name: make install
-      run: make install
-    - name: make distcheck
-      run: make -C install ./
