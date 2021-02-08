@@ -26,10 +26,6 @@ MAKEFLAGS += -rR
 
 TARGET = mdn
 O = build
-SRC =\
-	src/ \
-	parser/ \
-	blender/
 
 UNAME_S := $(shell uname -s 2>/dev/null || echo not)
 
@@ -83,15 +79,6 @@ XML2_LIBS      := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(XML2)),-lxml
 SOURCES := $(sort $(wildcard src/*.c blender/*.c parser/*.c))
 OBJECTS  = $(SOURCES:%.c=$O/%.o)
 
-# use make V=1 to see the raw commands or make -s for silence
-ifeq (,$V$(findstring s,$(word 1,$(MAKEFLAGS))))
-E := @echo
-Q := @
-else
-E := @:
-Q :=
-endif
-
 .SECONDEXPANSION:
 .PRECIOUS: $O/%/ $O/%
 .PHONY: all clean install uninstall
@@ -100,22 +87,22 @@ all: $(TARGET)
 
 # executables
 $(TARGET): $(OBJECTS)
-	$E "formula  " $@
-	$Q$(LD) -o $@ $(LDFLAGS) $^ $(LIBS)
+	@echo "formula  " $@
+	@$(LD) -o $@ $(LDFLAGS) $^ $(LIBS)
 
 # perfect hashing
 blender_blocks: parser/blender_blocks.h
 
 parser/blender_blocks.h: blender_block_names.txt
-	$E Gperf $@
-	$Q$(GPERF) -N find_block_tag -H hash_block_tag -C -c -E --ignore-case $^ > $@
+	@echo Gperf $@
+	@$(GPERF) -N find_block_tag -H hash_block_tag -C -c -E --ignore-case $^ > $@
 
 $O/parser/markdown.o: parser/blender_blocks.h
 
 # housekeeping
 clean:
-	$E "Remove " $O $(TARGET)
-	$Q$(RM_RF) $O $(TARGET)
+	@echo "Remove " $O $(TARGET)
+	@$(RM_RF) $O $(TARGET)
 
 install: $(TARGET)
 	$(INSTALL) -dm755 $(DESTDIR)$(bindir)
@@ -129,10 +116,10 @@ uninstall:
 
 # generic object compilations
 $O/%.o:	%.c | $$(@D)/
-	$E "Compile  " $<
-	$Q$(CC) -o $@ $(CFLAGS) -c $<
+	@echo "Compile  " $<
+	@$(CC) -o $@ $(CFLAGS) -c $<
 
 # generic build directory creation
 $O/%/:
-	$E "Create   " $@
-	$Q$(MKDIR_P) $@
+	@echo "Create   " $@
+	@$(MKDIR_P) $@
