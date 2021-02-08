@@ -26,6 +26,10 @@ MAKEFLAGS += -rR
 
 TARGET = mdn
 O = build
+SRC =\
+	src/ \
+	parser/ \
+	blender/
 
 UNAME_S := $(shell uname -s 2>/dev/null || echo not)
 
@@ -38,7 +42,7 @@ exec_prefix = $(prefix)
 bindir      = $(exec_prefix)/bin
 
 # tools
-CC         = gcc -std=gnu11
+CC         = gcc
 LD         = gcc
 GPERF      = gperf
 MKDIR_P    = mkdir -p
@@ -96,21 +100,21 @@ all: $(TARGET)
 
 # executables
 $(TARGET): $(OBJECTS)
-	$E '  LD    $@'
+	$E "formula  " $@
 	$Q$(LD) -o $@ $(LDFLAGS) $^ $(LIBS)
 
 # perfect hashing
 blender_blocks: parser/blender_blocks.h
 
 parser/blender_blocks.h: blender_block_names.txt
-	$E '  GPERF $@'
+	$E Gperf $@
 	$Q$(GPERF) -N find_block_tag -H hash_block_tag -C -c -E --ignore-case $^ > $@
 
 $O/parser/markdown.o: parser/blender_blocks.h
 
 # housekeeping
 clean:
-	$E '  RM    $O $(TARGET)'
+	$E "Remove " $O $(TARGET)
 	$Q$(RM_RF) $O $(TARGET)
 
 install: $(TARGET)
@@ -121,14 +125,14 @@ uninstall:
 	$(RM_RF) $(DESTDIR)$(bindir)/$(TARGET)
 
 # automatic dependencies
--include $O/*.d $O/*/*.d
+-include $(wildcard $($O)/*.d)
 
 # generic object compilations
 $O/%.o:	%.c | $$(@D)/
-	$E '  CC    $<'
+	$E "Compile  " $<
 	$Q$(CC) -o $@ $(CFLAGS) -c $<
 
 # generic build directory creation
 $O/%/:
-	$E '  MKDIR $@'
+	$E "Create   " $@
 	$Q$(MKDIR_P) $@
