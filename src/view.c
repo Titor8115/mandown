@@ -46,7 +46,7 @@ static const struct {short pr; attr_t at;} node_attr[] =
   [N_EM]      = {P_CONTROL,                                       A_ITALIC},
   [N_BOLD]    = {P_CONTROL,                                         A_BOLD},
   [N_INS]     = {P_CONTROL,                                    A_UNDERLINE},
-  [N_DEL]     = {P_CONTROL,                            A_INVIS | A_REVERSE},
+  [N_DEL]     = {P_CONTROL,                            A_REVERSE},
   [N_PRE]     = {P_CONTROL | P_SELF_FORM | P_SPLIT,               A_NORMAL},
   [N_KBD]     = {P_CONTROL,                                          A_DIM},
   [N_HEADING] = {P_CONTROL,                                         A_BOLD},
@@ -132,7 +132,7 @@ move_cursor(struct frame *part, int cur_y, int cur_x)
 }
 
 static void
-render_content(struct frame *dest, struct dom_link *ib, struct stack *href_table)
+render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
 {
   int                    cur_y = 0;
   int                    cur_x = 0;
@@ -218,6 +218,14 @@ render_content(struct frame *dest, struct dom_link *ib, struct stack *href_table
   }
 }
 
+// static void
+// render_probe(struct frame *dest, int y, int x, struct buf *dom_href_stack)
+// {
+//   for (dest->height; ((dest->height * dest->width) < dom_href_stack->size); dest->height++) {
+    
+//   }
+// }
+
 struct dom_link *
 get_content(xmlNode *node, int fold, struct stack *href_table)
 {
@@ -291,18 +299,20 @@ get_content(xmlNode *node, int fold, struct stack *href_table)
         link->prop |= node_attr[N_HEADING].pr;
         tail->prop ^= P_SPLIT;
       }
-      else if (cmp_xml("ul", cur_node->name) || cmp_xml("ol", cur_node->name)) {  // * unordered list
+      else if (cmp_xml("ul", cur_node->name) ||
+               cmp_xml("ol", cur_node->name)) {  // * unordered list
         link->fold += 2;
       }
       else if (cmp_xml("li", cur_node->name)) {  //  * list item
-        bufputs(link->buf, "\u00b7");
+        bufputs(link->buf, "•");
         link->prop |= P_SPLIT;
       }
       else if (cmp_xml("p", cur_node->name)) {  // * paragraph
         link->attr |= node_attr[N_PLAIN].at;
         // link->prop |= node_attr[N_PLAIN].pr;
       }
-      else if (cmp_xml("strong", cur_node->name) || cmp_xml("b", cur_node->name)) {  //  * bold
+      else if (cmp_xml("strong", cur_node->name) ||
+               cmp_xml("b", cur_node->name)) {  //  * bold
         link->attr |= node_attr[N_BOLD].at;
         link->prop |= node_attr[N_BOLD].pr;
       }
@@ -326,7 +336,7 @@ get_content(xmlNode *node, int fold, struct stack *href_table)
         link->prop |= node_attr[N_KBD].pr;
       }
       else if (cmp_xml("pre", cur_node->name)) {  //  * codeblock
-        link->prop |= P_SELF_FORM | P_SPLIT;
+        link->prop |= node_attr[N_PRE].pr ^ P_SPLIT;
         link->fold += 2;
       }
       else if (cmp_xml("code", cur_node->name)) {  //  * codeblock
@@ -421,7 +431,7 @@ int view(const struct config *config, const struct buf *ob, int href_count)
 
   // * Grow DOM tree;
   doc = htmlReadMemory((char *)(ob->data), (int)(ob->size),
-                       "file", NULL, HTML_PARSE_NOBLANKS | HTML_PARSE_NOWARNING | HTML_PARSE_RECOVER);
+                       "file", NULL, HTML_PARSE_NOBLANKS | HTML_PARSE_NOWARNING | HTML_PARSE_RECOVER | HTML_PARSE_NOERROR);
   if (!doc) {
     sderror(&ret, "Failed to make sense of given file as HTML");
     return ret;
@@ -438,7 +448,8 @@ int view(const struct config *config, const struct buf *ob, int href_count)
   content = get_content(rootNode, config->fold, &ref_stack);
 
   setlocale(LC_ALL, "");
-  initscr();            /* Initialize ncurses */
+
+  newterm(NULL, stdout, stderr);
   noecho();             /* disable echo of keyboard typing */
   keypad(stdscr, TRUE); /* enable arrow keys */
   timeout(200);
@@ -465,13 +476,13 @@ int view(const struct config *config, const struct buf *ob, int href_count)
 
   mdn.pad = page;
   mdn.bar = status;
-  render_content(page, content, &ref_stack);
+  render_page(page, content, &ref_stack);
 
   refresh();
 
   while ((key = getch()) != 'q') {
     switch (key) {
-      case KEY_MOUSE:
+      case KEY_MOUSE: {
         if (getmouse(&event) == OK) {
           if (event.bstate & WHEEL_UP)
             goto key_up;
@@ -483,6 +494,7 @@ int view(const struct config *config, const struct buf *ob, int href_count)
           }
           break;
         }
+      }
       case TAB: {  tab_find:
           link = dom_stack_find(&ref_stack, stack_index, page->cur_y, page->cur_y + height, event.x);
           stack_index = link->index + 1;
@@ -551,7 +563,7 @@ int view(const struct config *config, const struct buf *ob, int href_count)
               wresize(page->win, page->height, page->width);
               // wresize(status->win, status->height, status->width);
               wclear(page->win);
-              render_content(page, content, &ref_stack);
+              render_page(page, content, &ref_stack);
           }
         }
         break;

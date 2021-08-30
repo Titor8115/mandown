@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #ifdef DEBUG
-#include <unistd.h>
 #endif
 
 #include "blender.h"
@@ -110,8 +110,8 @@ int main(int argc, char **argv)
                              MKDEXT_STRIKETHROUGH;
   const char *             in  = NULL;
   const char *             out = NULL;
-  const char *             ext;
-  const char *             title;
+  const char *             ext = "";
+  const char *             title = "";
   FILE *                   fp_in;
   FILE *                   fp_out;
   struct buf *             ib;
@@ -121,10 +121,6 @@ int main(int argc, char **argv)
   struct blender_renderopt options;
 
   /* Get current working directory */
-  if (argc < 2) {
-    usage();
-    return EXIT_FAILURE;
-  }
 
   // config = config_new();
 
@@ -155,21 +151,35 @@ int main(int argc, char **argv)
         break;
     }
   }
+ if (isatty(STDIN_FILENO)) {
+   if (argc < 2) {
+     usage();
+     return EXIT_FAILURE;
+   }
 
-  if (!in) {
-    for (int i = optind; i < argc; i++)
-      in = argv[optind];
-  }
-  if (!in) {
-    sderror(&ret, "No file is given");
-    return ret;
-  }
-    /* Reading file */
-    fp_in = fopen(in, "r+");
-  if (!fp_in) {
-    sderror(&ret, strerror(errno));
-    return ret;
-  }
+   if (!in) {
+     for (int i = optind; i < argc; i++)
+       in = argv[optind];
+   }
+   if (!in) {
+     sderror(&ret, "No file is given");
+     return ret;
+   }
+   /* Reading file */
+   fp_in = fopen(in, "r+");
+   if (!fp_in) {
+     sderror(&ret, strerror(errno));
+     return ret;
+   }
+   title = get_file_ext(in, '/');
+   if ((strcmp(title, "")) == 0)
+     title = in;
+
+   ext = get_file_ext(title, '.');
+ }
+ else {
+   fp_in = stdin;
+ }
 
   ib = bufnew(READ_UNIT);
   bufgrow(ib, READ_UNIT);
@@ -177,28 +187,31 @@ int main(int argc, char **argv)
     ib->size += ret;
     bufgrow(ib, ib->size + READ_UNIT);
   }
-  fclose(fp_in);
+  if (isatty(STDIN_FILENO))
+    fclose(fp_in);
 
-  title = get_file_ext(in, '/');
-  ext   = get_file_ext(in, '.');
-  if (((strncmp(ext, "", 1)) == 0) || (strcmp(title, "")) == 0) {
-    title = in;
-  }
-  else if ((strcmp(ext, "html")) == 0) {
-    ob = ib;
-    goto prepare_render;
-  }
   ob = bufnew(OUTPUT_UNIT);
-  sdblender_renderer(&callbacks, &options, 0);
-  bufprintf(ob, "<html><head><title >%s(7)</title></head><body>", in);
-  markdown = sd_markdown_new(extensions, 16, &callbacks, &options);
-  sd_markdown_render(ob, ib->data, ib->size, markdown);
-  bufputs(ob, "</body></html>\n");
-  sd_markdown_free(markdown);
+  if ((strcmp(ext, "html")) == 0) {
+    bufput(ob, ib->data, ib->size);
+  }
+  else {
+    bufprintf(ob, "<html><head><title>%s(7)</title></head><body>", title);
+    if (((strcmp(ext, "")) == 0) || ((strcmp(ext, "txt")) == 0)) {
+      bufputs(ob, "<pre>");
+      bufput(ob, ib->data, ib->size);
+      bufputs(ob, "</pre>");
+    }
+    else if (((strcmp(ext, "md")) == 0) || (strcmp(ext, "MD")) == 0) {
+      sdblender_renderer(&callbacks, &options, 0);
+      markdown = sd_markdown_new(extensions, 16, &callbacks, &options);
+      sd_markdown_render(ob, ib->data, ib->size, markdown);
+      sd_markdown_free(markdown);
+    }
+    bufputs(ob, "</body></html>\n");
+  }
   bufrelease(ib);
 
 /* Prepare for parsing */
-prepare_render:
   if (setting.mode) {  // * output to file
     if (!(fp_out = fopen(out, "w"))) {
       sderror(&ret, strerror(errno));
@@ -208,6 +221,9 @@ prepare_render:
       fwrite((void *)ob->data, ob->size, 1, fp_out);
       fclose(fp_out);
     }
+  }
+  else if (!isatty(STDOUT_FILENO)) {
+    fwrite((void *)ob->data, ob->size, 1, stdout);
   }
 #ifdef DEBUG
 
