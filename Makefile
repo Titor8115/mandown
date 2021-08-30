@@ -28,7 +28,6 @@ TARGET = mdn
 O = build
 
 UNAME_S := $(shell uname -s 2>/dev/null || echo not)
-DISTRIB_ID := $(shell cat /etc/*-release 2>/dev/null | grep -oP "(?<=DISTRIB_ID=).*" || echo not)
 
 PREFIX ?= /usr/local
 DESTDIR =
@@ -56,9 +55,9 @@ DEPENDS   = -MMD -MP
 INCLUDES  = -Iparser -Iblender
 DEFINES   =
 CFLAGS    = $(OPT) -pipe $(DBGSYMS) $(WARNINGS) $(DEPENDS) $(INCLUDES) $(DEFINES)
-CFLAGS   += $(CURSES_CFLAGS) $(XML2_CFLAGS)
+CFLAGS   += $(NCURSES_CFLAGS) $(XML2_CFLAGS)
 LDFLAGS   = $(OPT) $(DBGSYMS)
-LIBS      = $(CURSES_LIBS) $(XML2_LIBS)
+LIBS      = $(NCURSES_LIBS) $(XML2_LIBS)
 
 # OS-specific additions
 ifeq ($(UNAME_S),Linux)
@@ -72,13 +71,18 @@ ifeq ($(UNAME_S),Linux)
 	endif
 else ifeq ($(UNAME_S),Darwin)
 	CURSES   = ncurses
+endif
+
+ifeq ($(UNAME_S),Darwin)
+NCURSES   = ncurses
 else
-	CURSES   = ncurses
+NCURSES   = ncurses
+LDFLAGS  += -Wl,--copy-dt-needed-entries
 endif
 
 # libraries
-CURSES_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(CURSES)))
-CURSES_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(CURSES)),-l$(CURSES))
+NCURSES_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(NCURSES)))
+NCURSES_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(NCURSES)),-l$(NCURSES))
 
 XML2            = libxml-2.0
 XML2_CFLAGS    := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(XML2)),-I/usr/include/libxml2)
@@ -89,7 +93,7 @@ SOURCES := $(sort $(wildcard src/*.c blender/*.c parser/*.c))
 OBJECTS  = $(SOURCES:%.c=$O/%.o)
 
 .SECONDEXPANSION:
-.PRECIOUS: $O/%/ $O/%
+.PRECIOUS: $O/%
 .PHONY: all clean install uninstall
 
 all: $(TARGET)
@@ -124,11 +128,10 @@ uninstall:
 -include $(wildcard $($O)/*.d)
 
 # generic object compilations
-$O/%.o:	%.c | $$(@D)/
+$O/%.o:	%.c
+	@echo "Create   " $(@D)
+	@$(MKDIR_P) $(@D)
 	@echo "Compile  " $<
 	@$(CC) -o $@ $(CFLAGS) -c $<
 
 # generic build directory creation
-$O/%/:
-	@echo "Create   " $@
-	@$(MKDIR_P) $@

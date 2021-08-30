@@ -179,6 +179,7 @@ int main(int argc, char **argv)
  }
  else {
    fp_in = stdin;
+   ext = "md";
  }
 
   ib = bufnew(READ_UNIT);
