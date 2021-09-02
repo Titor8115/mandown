@@ -74,7 +74,7 @@ ifeq ($(UNAME_S),Linux)
 else ifeq ($(UNAME_S),Darwin)
 	CURSES   = ncurses
 else
-	CURSES   = ncurses
+CURSES   = ncurses
 endif
 
 # libraries
@@ -93,7 +93,7 @@ SOURCES := $(sort $(wildcard src/*.c blender/*.c parser/*.c))
 OBJECTS  = $(SOURCES:%.c=$O/%.o)
 
 .SECONDEXPANSION:
-.PRECIOUS: $O/%/ $O/%
+.PRECIOUS: $O/%
 .PHONY: all clean install uninstall
 
 all: $(TARGET)
@@ -130,11 +130,10 @@ uninstall:
 -include $(wildcard $($O)/*.d)
 
 # generic object compilations
-$O/%.o:	%.c | $$(@D)/
+$O/%.o:	%.c
+	@echo "Create   " $(@D)
+	@$(MKDIR_P) $(@D)
 	@echo "Compile  " $<
 	@$(CC) -o $@ $(CFLAGS) -c $<
 
 # generic build directory creation
-$O/%/:
-	@echo "Create   " $@
-	@$(MKDIR_P) $@
