@@ -408,7 +408,7 @@ get_content(xmlNode *node, int fold, struct stack *href_table)
 }
 
 
-int view(const struct config *config, const struct buf *ob, int href_count)
+int view(const struct mdn_config *config, const struct buf *ob, int href_count)
 {
   int                    ret    = 0;
   bool                   update = TRUE; /* control needs to update */
@@ -445,7 +445,7 @@ int view(const struct config *config, const struct buf *ob, int href_count)
   }
 
   stack_init(&ref_stack, href_count);
-  content = get_content(rootNode, config->fold, &ref_stack);
+  content = get_content(rootNode, config->indent, &ref_stack);
 
   setlocale(LC_ALL, "");
 
@@ -492,8 +492,8 @@ int view(const struct config *config, const struct buf *ob, int href_count)
             page->cur_y += event.y;
             goto tab_find;
           }
-          break;
         }
+        break;
       }
       case TAB: {  tab_find:
           link = dom_stack_find(&ref_stack, stack_index, page->cur_y, page->cur_y + height, event.x);

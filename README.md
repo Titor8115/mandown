@@ -10,9 +10,9 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 ## Update
 
-- Mouse: other key are in progress
-  - enable mouse_1 select href 
-  - correct mouse wheel for scrolling.
+- User Customization
+  - Added program configuration feature (currently only for page wrap)
+  - Config file location: `~/.config/mdn/mdnrc`
 
 ## Sample
 

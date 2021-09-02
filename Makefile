@@ -32,6 +32,7 @@ DISTRIB_ID := $(shell cat /etc/*-release 2>/dev/null | grep -oP "(?<=DISTRIB_ID=
 
 PREFIX ?= /usr/local
 DESTDIR =
+CONFIGDIR = ~/.config/mdn
 
 # autoconf compatible variables
 prefix      = $(PREFIX)
@@ -56,9 +57,9 @@ DEPENDS   = -MMD -MP
 INCLUDES  = -Iparser -Iblender
 DEFINES   =
 CFLAGS    = $(OPT) -pipe $(DBGSYMS) $(WARNINGS) $(DEPENDS) $(INCLUDES) $(DEFINES)
-CFLAGS   += $(CURSES_CFLAGS) $(XML2_CFLAGS)
+CFLAGS   += $(CURSES_CFLAGS) $(XML2_CFLAGS) $(CONFIG_CFLAGS)
 LDFLAGS   = $(OPT) $(DBGSYMS)
-LIBS      = $(CURSES_LIBS) $(XML2_LIBS)
+LIBS      = $(CURSES_LIBS) $(XML2_LIBS) $(CONFIG_LIBS)
 
 # OS-specific additions
 ifeq ($(UNAME_S),Linux)
@@ -84,6 +85,9 @@ XML2            = libxml-2.0
 XML2_CFLAGS    := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(XML2)),-I/usr/include/libxml2)
 XML2_LIBS      := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(XML2)),-lxml2)
 
+CONFIG_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags libconfig))
+CONFIG_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs libconfig),-lconfig)
+
 # sources
 SOURCES := $(sort $(wildcard src/*.c blender/*.c parser/*.c))
 OBJECTS  = $(SOURCES:%.c=$O/%.o)
@@ -96,6 +100,7 @@ all: $(TARGET)
 
 # executables
 $(TARGET): $(OBJECTS)
+	@$(MKDIR_P) $(CONFIGDIR)
 	@echo "formula  " $@
 	@$(LD) -o $@ $(LDFLAGS) $^ $(LIBS)
 
@@ -119,6 +124,7 @@ install: $(TARGET)
 
 uninstall:
 	$(RM_RF) $(DESTDIR)$(bindir)/$(TARGET)
+	$(RM_RF) $(CONFIGDIR)
 
 # automatic dependencies
 -include $(wildcard $($O)/*.d)

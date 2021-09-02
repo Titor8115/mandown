@@ -7,9 +7,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#ifdef DEBUG
-#endif
-
 #include "blender.h"
 #include "markdown.h"
 
@@ -61,31 +58,6 @@ void usage()
   fprintf(stdout, "%s", "HTML format is partly supported. TUI help page soon replace Pager control section\n");
 }
 
-static struct config setting = {
-    PAGE_MODE,
-    LINE_FOLD,
-};
-
-struct config *
-config_new()
-{
-  struct config *ret;
-  ret = malloc(sizeof *ret);
-
-  if (ret) {
-    ret->mode = PAGE_MODE;
-    ret->fold = LINE_FOLD;
-  }
-  return ret;
-}
-
-void config_free(struct config *config)
-{
-  if (!config)
-    return;
-  free(config);
-}
-
 static const char *
 get_file_ext(const char *file, const char ext)
 {
@@ -104,6 +76,7 @@ int main(int argc, char **argv)
 #endif
   int          ret = 0;
   int          opt;
+  int          mode = 0;
   unsigned int extensions = MKDEXT_NO_INTRA_EMPHASIS |
                              MKDEXT_TABLES |
                              MKDEXT_AUTOLINK |
@@ -117,6 +90,7 @@ int main(int argc, char **argv)
   struct buf *             ib;
   struct buf *             ob;
   struct sd_markdown *     markdown;
+  struct mdn_config  *     setting;
   struct sd_callbacks      callbacks;
   struct blender_renderopt options;
 
@@ -134,8 +108,8 @@ int main(int argc, char **argv)
         exit(EXIT_SUCCESS);
         break;
       case 'o':
-        out          = optarg;
-        setting.mode = FILE_MODE;
+        out  = optarg;
+        mode = FILE_MODE;
         break;
       case ':':
         if (optopt == 'f') {
@@ -143,8 +117,8 @@ int main(int argc, char **argv)
           return ret;
         }
         if (optopt == 'o') {
-          out          = "/dev/stdout";
-          setting.mode = FILE_MODE;
+          out  = "/dev/stdout";
+          mode = FILE_MODE;
         }
         break;
       default:
@@ -178,6 +152,7 @@ int main(int argc, char **argv)
    ext = get_file_ext(title, '.');
  }
  else {
+   ext = "html";
    fp_in = stdin;
  }
 
@@ -189,6 +164,8 @@ int main(int argc, char **argv)
   }
   if (isatty(STDIN_FILENO))
     fclose(fp_in);
+
+  setting = default_config_new();
 
   ob = bufnew(OUTPUT_UNIT);
   if ((strcmp(ext, "html")) == 0) {
@@ -212,7 +189,7 @@ int main(int argc, char **argv)
   bufrelease(ib);
 
 /* Prepare for parsing */
-  if (setting.mode) {  // * output to file
+  if (mode) {  // * output to file
     if (!(fp_out = fopen(out, "w"))) {
       sderror(&ret, strerror(errno));
       goto clean_up;
@@ -225,34 +202,15 @@ int main(int argc, char **argv)
   else if (!isatty(STDOUT_FILENO)) {
     fwrite((void *)ob->data, ob->size, 1, stdout);
   }
-#ifdef DEBUG
-
-  else if (!isatty(STDOUT_FILENO)) {  // * output to piped pager
-    config.mode = FILE_MODE;
-
-    pid = pipe(pfd);
-    if (pid < 0) {
-      perror("pipe failed");
-      return EXIT_FAILURE;
-    }
-    else if (pid == 0) {
-      close(pfd[0]);
-      dup2(pfd[1], STDOUT_FILENO);
-      close(pfd[1]);
-    }
-    else {
-    }
-  }
-
-#endif
 
   else {  // * output to mandown pager
-    ret = view(&setting, ob, href);
+    setting = config(setting);
+    ret = view(setting, ob, href);
   }
 
   /* Clean up */
 clean_up:
   bufrelease(ob);
-  // config_free(config);
+  default_config_free(setting);
   return ret;
 }
