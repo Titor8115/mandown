@@ -154,6 +154,7 @@ int main(int argc, char **argv)
  else {
    ext = "html";
    fp_in = stdin;
+   ext = "md";
  }
 
   ib = bufnew(READ_UNIT);
