@@ -10,22 +10,6 @@
 #include "blender.h"
 #include "markdown.h"
 
-void sd_info(char *output)
-{
-  fprintf(stdout, "%snote: %s%s\n", "\033[36m", "\033[0m", output);
-}
-
-void sd_error(int *ret, char *output)
-{
-  (*ret) = 1;
-  fprintf(stderr, "%serror: %s%s\n", "\033[31m", "\033[0m", output);
-}
-
-void sd_warn(char *output)
-{
-  fprintf(stderr, "%swarning: %s%s\n", "\033[33m", "\033[0m", output);
-}
-
 void usage()
 {
   fprintf(stdout, "%s\n", "mdn - Markdown Manual, a man(1) like markdown pager");
@@ -34,6 +18,8 @@ void usage()
   fprintf(stdout, "%-20s%s\n", "  -f, --file", "optional flag for filepath");
   fprintf(stdout, "%-20s%s\n", "  -h, --help", "this help text");
   fprintf(stdout, "%-20s%s\n\n", "  -o, --outpath", "xhtml version of input file");
+
+  fprintf(stdout, "%s\n\n", "Custom setting: ~/.config/mdn/mdnrc");
 
   fprintf(stdout, "%s\n\n", "Pager control:");
 
@@ -62,7 +48,10 @@ static const char *
 get_file_ext(const char *file, const char ext)
 {
   const char *dot = strrchr(file, ext);
-  if (!dot || dot == file) return "";
+
+  if (!dot || dot == file)
+    return "";
+
   return dot + 1;
 }
 
@@ -70,33 +59,26 @@ int main(int argc, char **argv)
 {
 #ifdef DEBUG
 
-  int   pfd[2];
+  int pfd[2];
   pid_t pid;
 
 #endif
-  int          ret = 0;
-  int          opt;
-  int          mode = 0;
-  unsigned int extensions = MKDEXT_NO_INTRA_EMPHASIS |
-                             MKDEXT_TABLES |
-                             MKDEXT_AUTOLINK |
-                             MKDEXT_STRIKETHROUGH;
-  const char *             in  = NULL;
-  const char *             out = NULL;
-  const char *             ext = "";
-  const char *             title = "";
   FILE *                   fp_in;
   FILE *                   fp_out;
   struct buf *             ib;
   struct buf *             ob;
   struct sd_markdown *     markdown;
-  struct mdn_config  *     setting;
+  struct mdn_cfg *         setting;
   struct sd_callbacks      callbacks;
   struct blender_renderopt options;
-
-  /* Get current working directory */
-
-  // config = config_new();
+  const char *             in    = NULL;
+  const char *             out   = NULL;
+  const char *             ext   = "";
+  const char *             title = "";
+  int                      opt;
+  int                      mode  = PAGE_MODE;
+  int                      ret   = EXIT_FAILURE;
+  unsigned int             extensions = MKDEXT_NO_INTRA_EMPHASIS | MKDEXT_TABLES | MKDEXT_AUTOLINK | MKDEXT_STRIKETHROUGH;
 
   while ((opt = getopt(argc, argv, ":f:ho:")) != -1) {
     switch (opt) {
@@ -105,16 +87,15 @@ int main(int argc, char **argv)
         break;
       case 'h':
         usage();
-        exit(EXIT_SUCCESS);
-        break;
+        return EXIT_SUCCESS;
       case 'o':
         out  = optarg;
         mode = FILE_MODE;
         break;
       case ':':
         if (optopt == 'f') {
-          sderror(&ret, "No file is given");
-          return ret;
+          sderror("No file is given");
+          return EXIT_FAILURE;
         }
         if (optopt == 'o') {
           out  = "/dev/stdout";
@@ -125,37 +106,36 @@ int main(int argc, char **argv)
         break;
     }
   }
- if (isatty(STDIN_FILENO)) {
-   if (argc < 2) {
-     usage();
-     return EXIT_FAILURE;
-   }
+  if (isatty(STDIN_FILENO)) {
+    if (argc < 2) {
+      usage();
+      return EXIT_FAILURE;
+    }
 
-   if (!in) {
-     for (int i = optind; i < argc; i++)
-       in = argv[optind];
-   }
-   if (!in) {
-     sderror(&ret, "No file is given");
-     return ret;
-   }
-   /* Reading file */
-   fp_in = fopen(in, "r+");
-   if (!fp_in) {
-     sderror(&ret, strerror(errno));
-     return ret;
-   }
-   title = get_file_ext(in, '/');
-   if ((strcmp(title, "")) == 0)
-     title = in;
+    if (!in) {
+      for (int i = optind; i < argc; i++)
+        in = argv[optind];
+    }
+    if (!in) {
+      sderror("No file is given");
+      return EXIT_FAILURE;
+    }
+    /* Reading file */
+    fp_in = fopen(in, "r+");
+    if (!fp_in) {
+      sderror(strerror(errno));
+      return EXIT_FAILURE;
+    }
+    title = get_file_ext(in, '/');
+    if ((strcmp(title, "")) == 0)
+      title = in;
 
-   ext = get_file_ext(title, '.');
- }
- else {
-   ext = "html";
-   fp_in = stdin;
-   ext = "md";
- }
+    ext = get_file_ext(title, '.');
+  }
+  else {
+    fp_in = stdin;
+    ext = "md";
+  }
 
   ib = bufnew(READ_UNIT);
   bufgrow(ib, READ_UNIT);
@@ -165,8 +145,6 @@ int main(int argc, char **argv)
   }
   if (isatty(STDIN_FILENO))
     fclose(fp_in);
-
-  setting = default_config_new();
 
   ob = bufnew(OUTPUT_UNIT);
   if ((strcmp(ext, "html")) == 0) {
@@ -189,10 +167,10 @@ int main(int argc, char **argv)
   }
   bufrelease(ib);
 
-/* Prepare for parsing */
-  if (mode) {  // * output to file
+  /* Prepare for parsing */
+  if (mode == FILE_MODE) {  /* output to file */
     if (!(fp_out = fopen(out, "w"))) {
-      sderror(&ret, strerror(errno));
+      sderror(strerror(errno));
       goto clean_up;
     }
     else {
@@ -204,14 +182,14 @@ int main(int argc, char **argv)
     fwrite((void *)ob->data, ob->size, 1, stdout);
   }
 
-  else {  // * output to mandown pager
-    setting = config(setting);
+  else {  /* output to mandown pager */
+    setting = configure();
     ret = view(setting, ob, href);
   }
 
   /* Clean up */
 clean_up:
   bufrelease(ob);
-  default_config_free(setting);
+  // default_rc_free(setting);
   return ret;
 }

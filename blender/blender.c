@@ -110,7 +110,7 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
   BUFPUTSL(ob, "</a>");
   
   return 1;
-}  // * blocks counted
+}  /* blocks counted */
 
 static void
 rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque) {
@@ -144,7 +144,7 @@ rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, v
 
   BUFPUTSL(ob, "</code></pre>\n");
   
-}  // * blocks counted
+}  /* blocks counted */
 
 static void
 rndr_blockquote(struct buf *ob, const struct buf *text, void *opaque) {
@@ -152,7 +152,7 @@ rndr_blockquote(struct buf *ob, const struct buf *text, void *opaque) {
   if (text) bufput(ob, text->data, text->size);
   BUFPUTSL(ob, "</blockquote>\n");
   
-}  // * blocks counted
+}  /* blocks counted */
 
 static int
 rndr_codespan(struct buf *ob, const struct buf *text, void *opaque) {
@@ -161,7 +161,7 @@ rndr_codespan(struct buf *ob, const struct buf *text, void *opaque) {
   BUFPUTSL(ob, "</code>");
   
   return 1;
-}  // * blocks counted
+}  /* blocks counted */
 
 static int
 rndr_strikethrough(struct buf *ob, const struct buf *text, void *opaque) {
@@ -200,7 +200,7 @@ rndr_linebreak(struct buf *ob, void *opaque) {
   bufputs(ob, USE_BLENDER(options) ? "<br/>\n" : "<br>\n");
   
   return 1;
-}  // * blocks counted
+}  /* blocks counted */
 
 static void
 rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque) {
@@ -214,7 +214,7 @@ rndr_header(struct buf *ob, const struct buf *text, int level, void *opaque) {
   if (text) bufput(ob, text->data, text->size);
   bufprintf(ob, "</h%d>\n", level);
   
-}  // * blocks counted
+}  /* blocks counted */
 
 static int
 rndr_link(struct buf *ob, const struct buf *link, const struct buf *title, const struct buf *content, void *opaque) {
@@ -253,7 +253,7 @@ rndr_list(struct buf *ob, const struct buf *text, int flags, void *opaque) {
   if (text) bufput(ob, text->data, text->size);
   bufput(ob, flags & MKD_LIST_ORDERED ? "</ol>\n" : "</ul>\n", 6);
   
-}  // * blocks counted
+}  /* blocks counted */
 
 static void
 rndr_listitem(struct buf *ob, const struct buf *text, int flags, void *opaque) {
@@ -267,7 +267,7 @@ rndr_listitem(struct buf *ob, const struct buf *text, int flags, void *opaque) {
   }
   BUFPUTSL(ob, "</li>\n");
   
-}  // * blocks counted
+}  /* blocks counted */
 
 static void
 rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque) {
@@ -308,7 +308,7 @@ rndr_paragraph(struct buf *ob, const struct buf *text, void *opaque) {
   }
   BUFPUTSL(ob, "</p>\n");
   
-}  // * blocks counted
+}  /* blocks counted */
 
 static void
 rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque) {
@@ -322,7 +322,7 @@ rndr_raw_block(struct buf *ob, const struct buf *text, void *opaque) {
   bufput(ob, text->data + org, sz - org);
   bufputc(ob, '\n');
   
-}  // * blocks counted
+}  /* blocks counted */
 
 static int
 rndr_triple_emphasis(struct buf *ob, const struct buf *text, void *opaque) {
@@ -338,7 +338,7 @@ rndr_hrule(struct buf *ob, void *opaque) {
   struct blender_renderopt *options = opaque;
   bufputs(ob, USE_BLENDER(options) ? "<hr/>\n" : "<hr>\n");
   
-}  // * blocks counted
+}  /* blocks counted */
 
 static int
 rndr_image(struct buf *ob, const struct buf *link, const struct buf *title, const struct buf *alt, void *opaque) {
@@ -410,7 +410,7 @@ rndr_tablerow(struct buf *ob, const struct buf *text, void *opaque) {
     bufput(ob, text->data, text->size);
   BUFPUTSL(ob, "</tr>\n");
   
-}  // * blocks counted
+}  /* blocks counted */
 
 static void
 rndr_tablecell(struct buf *ob, const struct buf *text, int flags, void *opaque) {
@@ -446,7 +446,7 @@ rndr_tablecell(struct buf *ob, const struct buf *text, int flags, void *opaque) 
     BUFPUTSL(ob, "</td>\n");
   }
   
-}  // * blocks counted
+}  /* blocks counted */
 
 static int
 rndr_superscript(struct buf *ob, const struct buf *text, void *opaque) {
@@ -495,7 +495,7 @@ toc_header(struct buf *ob, const struct buf *text, int level, void *opaque) {
     escape_blender(ob, text->data, text->size);
   BUFPUTSL(ob, "</a>\n");
   
-}  // * blocks not fixed
+}  /* blocks not fixed */
 
 static int
 toc_link(struct buf *ob, const struct buf *link, const struct buf *title, const struct buf *content, void *opaque) {

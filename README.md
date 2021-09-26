@@ -11,7 +11,7 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 ## Update
 
 - User Customization
-  - Added program configuration feature (currently only for page wrap)
+  - Added control schemes: mdn, vim, less(default since mdn isn't complete)
   - Config file location: `~/.config/mdn/mdnrc`
 
 ## Sample

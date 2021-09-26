@@ -28,7 +28,6 @@ TARGET = mdn
 O = build
 
 UNAME_S := $(shell uname -s 2>/dev/null || echo not)
-DISTRIB_ID := $(shell cat /etc/*-release 2>/dev/null | grep -oP "(?<=DISTRIB_ID=).*" || echo not)
 
 PREFIX ?= /usr/local
 DESTDIR =
@@ -68,9 +67,6 @@ ifeq ($(UNAME_S),Linux)
 	else
 		CURSES   = ncursesw
 	endif
-	ifeq ($(DISTRIB_ID),Gentoo)
-		LDFLAGS  += -Wl,--copy-dt-needed-entries
-	endif
 else ifeq ($(UNAME_S),Darwin)
 	CURSES   = ncurses
 else
@@ -81,9 +77,9 @@ endif
 CURSES_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(CURSES)))
 CURSES_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(CURSES)),-l$(CURSES))
 
-XML2            = libxml-2.0
-XML2_CFLAGS    := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(XML2)),-I/usr/include/libxml2)
-XML2_LIBS      := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(XML2)),-lxml2)
+XML2           = libxml-2.0
+XML2_CFLAGS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(XML2)),-I/usr/include/libxml2)
+XML2_LIBS     := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(XML2)),-lxml2)
 
 CONFIG_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags libconfig))
 CONFIG_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs libconfig),-lconfig)
@@ -101,7 +97,9 @@ all: $(TARGET)
 # executables
 $(TARGET): $(OBJECTS)
 	@$(MKDIR_P) $(CONFIGDIR)
-	@echo "formula  " $@
+	@echo
+	@echo "Formula:    " $@
+	@echo "Config dir: " $(CONFIGDIR)
 	@$(LD) -o $@ $(LDFLAGS) $^ $(LIBS)
 
 # perfect hashing
@@ -115,7 +113,7 @@ $O/parser/markdown.o: parser/blender_blocks.h
 
 # housekeeping
 clean:
-	@echo "Remove " $O $(TARGET)
+	@echo "Remove:   " $O $(TARGET)
 	@$(RM_RF) $O $(TARGET)
 
 install: $(TARGET)
@@ -131,9 +129,8 @@ uninstall:
 
 # generic object compilations
 $O/%.o:	%.c
-	@echo "Create   " $(@D)
 	@$(MKDIR_P) $(@D)
-	@echo "Compile  " $<
+	@echo "Compiling:" $<
 	@$(CC) -o $@ $(CFLAGS) -c $<
 
 # generic build directory creation

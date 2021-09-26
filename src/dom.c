@@ -1,5 +1,9 @@
 #include "dom.h"
 
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+
 struct dom_link *
 dom_link_new(struct buf *buf)
 {
@@ -7,11 +11,11 @@ dom_link_new(struct buf *buf)
   ret = malloc(sizeof(struct dom_link));
 
   if (ret) {
-    ret->buf  = buf;
-    ret->attr = 0;
-    ret->next = NULL;
-    ret->fold = 0;
-    ret->prop = 0;
+    ret->next   = NULL;
+    ret->buf    = buf;
+    ret->indent = 0;
+    ret->prop   = 0;
+    ret->attr   = 0;
   }
   return ret;
 }
@@ -50,11 +54,11 @@ void dom_link_reset(struct dom_link *link)
     return;
   bufrelease(link->buf);
   dom_link_free(link->next);
-  link->buf  = NULL;
-  link->attr = 0;
-  link->next = NULL;
-  link->fold = 0;
-  link->prop = 0;
+  link->buf    = NULL;
+  link->attr   = 0;
+  link->next   = NULL;
+  link->indent = 0;
+  link->prop   = 0;
 }
 
 struct dom_href_stack *
