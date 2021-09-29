@@ -8,9 +8,9 @@
 
 static struct mdn_cfg default_cfg =
 {
-        .use_mouse = CONFIG_TRUE,
-        .indent = 7,
-        .control_scheme = "less"
+  .use_mouse = CONFIG_TRUE,
+  .indent = 7,
+  .control_scheme = "less"
 };
 
 void sd_info(char *output)
@@ -40,7 +40,6 @@ void sd_warn(char *output)
 struct mdn_cfg *
 get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp)
 {
-  const char *control_scheme;
   config_setting_t *setting;
 
   setting = config_lookup(user, "use_mouse");
@@ -78,7 +77,6 @@ get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp)
     }
   }
   else {
-    control_scheme = config_setting_get_string(setting);
     default_cfg.control_scheme[0] = config_setting_get_string(setting)[0];
   }
 
