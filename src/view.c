@@ -33,52 +33,41 @@
 #define cmp_xml(str, node) xmlStrEqual((xmlChar *)str, (xmlChar *)node)
 #define get_prop(node, str) xmlGetProp((xmlNode *)node, (xmlChar *)str)
 
-#define get_display_size(y, x) (y = getmaxy(stdscr) - 1, x = getmaxx(stdscr))
-#define update_size(part, y, x) ((part)->height = y, (part)->width = x)
-#define get_frame_size(part, y, x) (y = getmaxy((part)->win), x = getmaxx((part)->win))
-
+#define get_display_size(d) ((d)->max_y = getmaxy(stdscr) - 1, (d)->max_x = getmaxx(stdscr))
+#define update_size(f, d)   ((f)->max_y = (d)->max_y, (f)->max_x = (d)->max_x)
 
 /* Available colors: BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE */
 static const struct {short fg; short bg;} color_pairs[] =
 {
-  [C_DEFAULT] = {-1,                        -1},
-  [C_RED]     = {COLOR_RED,                 -1},
-  [C_GREEN]   = {COLOR_GREEN,               -1},
-  [C_YELLOW]  = {COLOR_YELLOW,              -1},
-  [C_BLUE]    = {COLOR_BLUE,                -1},
-  [C_MAGENTA] = {COLOR_MAGENTA,             -1},
-  [C_CYAN]    = {COLOR_CYAN,                -1},
+  [C_DEFAULT] = {-1,                  -1},
+  [C_RED]     = {COLOR_RED,           -1},
+  [C_GREEN]   = {COLOR_GREEN,         -1},
+  [C_YELLOW]  = {COLOR_YELLOW,        -1},
+  [C_BLUE]    = {COLOR_BLUE,          -1},
+  [C_MAGENTA] = {COLOR_MAGENTA,       -1},
+  [C_CYAN]    = {COLOR_CYAN,          -1},
 };
 
-static const char frame_type[][19] =
+static const struct {char name[19]; attr_t at;} frame_type[] =
 {
-  [FRAME_NONE]  = "",
-  [FRAME_HELP]  = " Help ",
-  [FRAME_PAGE]  = " Markdown page ",
-  [FRAME_STATS] = " Markdown page ",
-  [FRAME_PROBE] = " Reference ",
+  [FRAME_NONE]  = {"",                 A_NORMAL},
+  [FRAME_HELP]  = {" Help ",           A_NORMAL},
+  [FRAME_PAGE]  = {" Markdown page ",  A_NORMAL},
+  [FRAME_STATS] = {" Markdown page ", A_REVERSE},
+  [FRAME_PROBE] = {" Reference ",     A_REVERSE},
 };
 
-static const attr_t frame_attr[] =
-{
-  [FRAME_NONE]    = A_NORMAL,
-  [FRAME_HELP]    = A_NORMAL,
-  [FRAME_PAGE]    = A_NORMAL,
-  [FRAME_STATS]   = A_REVERSE,
-  [FRAME_PROBE]   = A_REVERSE,
-};
-
-static const struct {uint8_t pr; attr_t at;} node_attr[] =
-{
-  [N_PLAIN]   = {P_REGULAR | P_SPLIT,                             A_NORMAL},
-  [N_EM]      = {P_CONTROL,                                       A_ITALIC},
-  [N_BOLD]    = {P_CONTROL,                                         A_BOLD},
-  [N_INS]     = {P_CONTROL,                                    A_UNDERLINE},
-  [N_DEL]     = {P_CONTROL,                                      A_REVERSE},
-  [N_PRE]     = {P_CONTROL | P_SELF_FORM | P_SPLIT,               A_NORMAL},
-  [N_KBD]     = {P_CONTROL,                                          A_DIM},
-  [N_HEADING] = {P_CONTROL,                                         A_BOLD},
-  [N_HREF]    = {P_CONTROL | P_HYPERLINK, A_UNDERLINE | COLOR_PAIR(C_BLUE)},
+static const attr_t node_attr[] = {
+    [N_EM]      = A_ITALIC,
+    [N_PLAIN]   = A_NORMAL,
+    [N_BOLD]    = A_BOLD,
+    [N_INS]     = A_UNDERLINE,
+    [N_DEL]     = A_REVERSE,
+    [N_PRE]     = A_NORMAL,
+    [N_CODE]    = COLOR_PAIR(C_YELLOW),
+    [N_KBD]     = A_DIM,
+    [N_HEADING] = A_BOLD,
+    [N_HREF]    = A_UNDERLINE | COLOR_PAIR(C_BLUE),
 };
 
 static void
@@ -104,24 +93,25 @@ scroll_up(struct frame *page)
 static inline void
 scroll_down(struct frame *page)
 {
-  int height = getmaxy(stdscr) - 1;
-  if (page->cur_y + height < page->height) page->cur_y++;
+  int max_y = getmaxy(stdscr) - 1;
+  if (page->cur_y + max_y < page->max_y) page->cur_y++;
 }
 
 struct frame *
-frame_new(int type, int height, int width, int begin_y, int begin_x)
+frame_new(int type, int max_y, int max_x, int begin_y, int begin_x)
 {
   struct frame *ret;
   ret = malloc(sizeof(struct frame));
 
   if (ret) {
-    ret->win        = NULL;
-    ret->attr       = frame_attr[type];
-    ret->frame_type = type;
-    ret->height     = height;
-    ret->width      = width;
-    ret->beg_y      = ret->cur_y = begin_y;
-    ret->beg_x      = ret->cur_x = begin_x;
+    ret->win   = NULL;
+    ret->type  = type;
+    ret->max_y = max_y;
+    ret->max_x = max_x;
+    ret->beg_y = begin_y;
+    ret->beg_x = begin_x;
+    ret->cur_y = 0;
+    ret->cur_x = 0;
   }
   return ret;
 }
@@ -141,21 +131,21 @@ toggle_attr(WINDOW *dest, int toggle, int attributes)
 }
 
 static void
-move_cursor(struct frame *part, int cur_y, int cur_x)
+move_cursor(struct frame *pad, int cur_y, int cur_x)
 {
-  if (!part->win)
+  if (!pad->win)
     return;
 
-  while (wmove(part->win, cur_y, cur_x) == ERR) {
-    if (cur_x >= part->width) {
+  while (wmove(pad->win, cur_y, cur_x) == ERR) {
+    if (cur_x >= pad->max_x) {
       cur_x = 0;
       cur_y++;
     }
 
-    if (cur_y >= part->height) {
-      part->height = cur_y + 2;
+    if (cur_y >= pad->max_y) {
+      pad->max_y = cur_y + 2;
     }
-    wresize(part->win, part->height, part->width);
+    wresize(pad->win, pad->max_y, pad->max_x);
   }
 }
 
@@ -175,25 +165,33 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
 
   for (ob = ib; ob != NULL; ob = ob->next) {
     if (ob->prop & P_CONTROL) {
-      toggle_attr(dest->win, (ob->prop & P_BEG_A), ob->attr);
-      toc = (ob->prop & P_SELF_FORM) ? "\n" : " \n";
-
-      if ((ob->prop & P_HYPERLINK) && (ob->prop &  P_BEG_A)) {
-        href        = href_table->item[stack_pos];
-        stack_pos++;
+      if (ob->prop & P_BEG_A) {
+        wattron(dest->win, ob->attr);
+        if ((ob->prop & P_PREFIXED))
+          toc = "\n";
+        if (ob->prop & P_HYPERLINK) {
+          href = href_table->item[stack_pos];
+          stack_pos++;
+          href->beg_y = cur_y;
+          href->beg_x = cur_x;
+        }
+      }
+      else {
+        wattroff(dest->win, ob->attr);
+        if ((ob->prop & P_PREFIXED))
+          toc = " \n";
+      }
+      if (ob->prop & P_SPLIT) {
+        move_cursor(dest, ++cur_y, cur_x = ob->indent);
+      }
+      if (ob->prop & P_SECTION) {
+        move_cursor(dest, ++cur_y, cur_x = ob->indent);
       }
     }
-
-    if (ob->prop & P_SPLIT) {
-      // cur_x = ob->indent;
-      move_cursor(dest, ++cur_y, cur_x = ob->indent);
-    }
-
     if (!ob->buf)
       continue;
     else {
       tmp = realloc(tmp, ob->buf->size + 1);
-      // tmp = calloc(ob->buf->size + 1, sizeof(char));
       memcpy(tmp, ob->buf->data, ob->buf->size + 1);
     }
 
@@ -204,20 +202,18 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
 
       if (cur_x == 0) move_cursor(dest, cur_y, cur_x = ob->indent);
 
-      if ((cur_x > ob->indent) && (cur_x + len >= dest->width)) {
+      if ((cur_x > ob->indent) && (cur_x + len >= dest->max_x)) {
         cur_x = ob->indent;
         cur_y++;
-        move_cursor(dest, cur_y + (len + ob->indent) / dest->width, cur_x);
+        move_cursor(dest, cur_y + (len + ob->indent) / dest->max_x, cur_x);
       }
-        if (href != NULL) {
-        href->beg_y = cur_y;
-        href->beg_x = cur_x;
-        // href->index = stack_pos;
-        href = NULL;
-        }
-
       waddnstr(dest->win, out, len);
       getyx(dest->win, cur_y, cur_x);
+      if (href != NULL) {
+        href->end_y = cur_y;
+        href->end_x = cur_x;
+        href = NULL;
+      }
       // j += len;
       position += len;
       if (position < ob->buf->size) {
@@ -225,13 +221,11 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
           // cur_x = ob->indent;
           move_cursor(dest, ++cur_y, cur_x = 0);
         }
-        else if (cur_x < dest->width) {
+        else if ((toc[0] == ' ') && (cur_x < dest->max_x)) {
           cur_x++;
           waddch(dest->win, toc[0]);
         }
       }
-      else
-        move_cursor(dest, cur_y, ++cur_x);
 
       position++;
 
@@ -240,9 +234,9 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
   }
   free(tmp);
 
-  if (dest->height != cur_y) {
-    dest->height = cur_y + 1;
-    wresize(dest->win, dest->height, dest->width);
+  if (dest->max_y != cur_y) {
+    dest->max_y = cur_y + 1;
+    wresize(dest->win, dest->max_y, dest->max_x);
   }
 }
 
@@ -257,67 +251,59 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
   xmlChar *              xml_prop;
 
   for (cur_node = node; cur_node != NULL; cur_node = cur_node->next) {
-    link       = dom_link_new(bufnew(OUTPUT_UNIT));
+    link         = dom_link_new(bufnew(OUTPUT_UNIT));
     link->indent = indent;
     if (cur_node->type == XML_ELEMENT_NODE) {
-      link->prop = P_BEG_A;
       tail       = dom_link_new(NULL);
-      tail->prop = P_CONTROL;
-
-      if (cmp_xml("body", cur_node->parent->name)) {
-        link->prop |= P_SPLIT;
-        tail->prop |= P_SPLIT;
-      }
+      link->prop = P_CONTROL | P_BEG_A;
+      tail->prop = P_CONTROL | P_END_A;
       // if (cmp_xml("html", cur_node->name)) {
       // }
       // else if (cmp_xml("head", cur_node->name)) {
       // }
       // else if (cmp_xml("body", cur_node->name)) {
       // }
+      if (cmp_xml("body", cur_node->parent->name)) {
+        link->prop |= P_SPLIT;
+      }
 
       if (cmp_xml("title", cur_node->name)) {
         link->indent = 0;
-        tail->prop |= P_SPLIT;
+        // tail->prop |= P_SPLIT;
       }
       else if (cmp_xml("h1", cur_node->name)) {  /* h1 as "NAME" .SH */
-        bufputs(link->buf, "\rNAME");
-        link->attr |= node_attr[N_HEADING].at;
-        link->prop |= node_attr[N_HEADING].pr;
-        tail->prop ^= P_SPLIT;
+        bufputs(link->buf, "NAME:");
+        link->indent = 0;
+        link->prop |= P_SECTION;
+        link->attr |= node_attr[N_HEADING];
       }
       else if (cmp_xml("h2", cur_node->name)) {  /* h2 for all other .SH */
         link->indent = 0;
-        link->attr |= node_attr[N_HEADING].at;
-        link->prop |= node_attr[N_HEADING].pr;
-        tail->prop ^= P_SPLIT;
+        link->prop |= P_SECTION;
+        link->attr |= node_attr[N_HEADING];
       }
       else if (cmp_xml("h3", cur_node->name)) {  /* h3 for .SS */
         link->indent = 3;
-        link->attr |= node_attr[N_HEADING].at;
-        link->prop |= node_attr[N_HEADING].pr;
-        tail->prop ^= P_SPLIT;
+        link->prop |= P_SECTION;
+        link->attr |= node_attr[N_HEADING];
       }
       else if (cmp_xml("h4", cur_node->name)) {  /* h4 as Sub of .SS */
         bufputs(link->buf, "SC: ");
         link->indent = 4;
-        link->attr |= node_attr[N_HEADING].at;
-        link->prop |= node_attr[N_HEADING].pr;
-        tail->prop ^= P_SPLIT;
+        link->prop |= P_SECTION;
+        link->attr |= node_attr[N_HEADING];
       }
       else if (cmp_xml("h5", cur_node->name)) {  /* h5 as Points in Sub */
-
         bufputs(link->buf, "PT: ");
         link->indent = 5;
-        link->attr |= node_attr[N_HEADING].at;
-        link->prop |= node_attr[N_HEADING].pr;
-        tail->prop ^= P_SPLIT;
+        link->prop |= P_SECTION;
+        link->attr |= node_attr[N_HEADING];
       }
       else if (cmp_xml("h6", cur_node->name)) {  /* h6 as Sub of Points */
         bufputs(link->buf, "PS: ");
         link->indent = 6;
-        link->attr |= node_attr[N_HEADING].at;
-        link->prop |= node_attr[N_HEADING].pr;
-        tail->prop ^= P_SPLIT;
+        link->prop |= P_SECTION;
+        link->attr |= node_attr[N_HEADING];
       }
       else if (cmp_xml("ul", cur_node->name) ||
                cmp_xml("ol", cur_node->name)) {  /* unordered list */
@@ -328,84 +314,72 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
         link->prop |= P_SPLIT;
       }
       else if (cmp_xml("p", cur_node->name)) {  /* paragraph */
-        link->attr |= node_attr[N_PLAIN].at;
-        // link->prop |= node_attr[N_PLAIN].pr;
+        link->attr |= node_attr[N_PLAIN];
       }
       else if (cmp_xml("strong", cur_node->name) ||
                cmp_xml("b", cur_node->name)) {  /* bold */
-        link->attr |= node_attr[N_BOLD].at;
-        link->prop |= node_attr[N_BOLD].pr;
+        link->attr |= node_attr[N_BOLD];
       }
       else if (cmp_xml("em", cur_node->name) ||
                cmp_xml("i", cur_node->name)) {  /* italic */
-        link->attr |= node_attr[N_EM].at;
-        link->prop |= node_attr[N_EM].pr;
+        link->attr |= node_attr[N_EM];
       }
       else if (cmp_xml("ins", cur_node->name) ||
                cmp_xml("u", cur_node->name)) {  /* underline */
-        link->attr |= node_attr[N_INS].at;
-        link->prop |= node_attr[N_INS].pr;
+        link->attr |= node_attr[N_INS];
       }
       else if (cmp_xml("del", cur_node->name) ||
                cmp_xml("s", cur_node->name)) {  /* strikethrough */
-        link->attr |= node_attr[N_DEL].at;
-        link->prop |= node_attr[N_DEL].pr;
+        link->attr |= node_attr[N_DEL];
       }
       else if (cmp_xml("kbd", cur_node->name)) {  /* keyboard key */
-        link->attr |= node_attr[N_KBD].at;
-        link->prop |= node_attr[N_KBD].pr;
+        link->attr |= node_attr[N_KBD];
       }
       else if (cmp_xml("pre", cur_node->name)) {  /* codeblock */
-        link->prop   |= node_attr[N_PRE].pr ^ P_SPLIT;
+        link->prop |= P_PREFIXED;
+        tail->prop |= P_PREFIXED;
         link->indent += 2;
       }
       else if (cmp_xml("code", cur_node->name)) {  /* codeblock */
-        link->attr |= node_attr[N_PRE].at | COLOR_PAIR(C_YELLOW);
-        link->prop |= node_attr[N_PRE].pr ^ P_SPLIT;
+        link->attr |= node_attr[N_CODE];
       }
       else if (cmp_xml("a", cur_node->name)) {  /* hyperlink */
-        link->attr |= node_attr[N_HREF].at;
-        link->prop |= node_attr[N_HREF].pr;
-
+        link->attr |= node_attr[N_HREF];
+        link->prop |= P_HYPERLINK | P_PREFIXED;
+        tail->prop |= P_HYPERLINK | P_PREFIXED;
         xml_prop = get_prop(cur_node, "href");
         if (xml_prop != NULL) {
-          href = dom_href_new(bufnew(OUTPUT_UNIT));
-          href->index = href_table->size - 1;
+          href = dom_href_new(bufnew(xmlStrlen(xml_prop)));
+          href->index = href_table->size;
           bufputs(href->url, (char *)xml_prop);
+          bufcstr(href->url);
           stack_push(href_table, href);
         }
         xmlFree(xml_prop);
       }
       else if (cmp_xml("img", cur_node->name)) {  /* image */
-        link->attr |= node_attr[N_HREF].at;
-        link->prop |= node_attr[N_HREF].pr;
+        link->attr |= node_attr[N_HREF];
+        link->prop |= P_HYPERLINK | P_PREFIXED;
+        tail->prop |= P_HYPERLINK | P_PREFIXED;
         xml_prop = get_prop(cur_node, "alt");
         if (xml_prop != NULL) {
           bufputs(link->buf, (char *)xml_prop);
         }
         xml_prop = get_prop(cur_node, "src");
         if (xml_prop != NULL) {
-          href = dom_href_new(bufnew(OUTPUT_UNIT));
-          href->index = href_table->size - 1;
+          href = dom_href_new(bufnew(xmlStrlen(xml_prop)));
+          href->index = href_table->size;
           bufputs(href->url, (char *)xml_prop);
+          bufcstr(href->url);
           stack_push(href_table, href);
         }
         xmlFree(xml_prop);
       }
 
-      if (cmp_xml("a", cur_node->parent->name) ||
-          cmp_xml("img", cur_node->parent->name)) {  /* style overwrite if is href content */
-        link->attr |= node_attr[N_HREF].at;
-      }
     }
     else if (cur_node->type == XML_TEXT_NODE) {
-      link->prop = node_attr[N_PLAIN].at;
+      link->prop = P_REGULAR;
       bufputs(link->buf, (char *)cur_node->content);
-
-      if (cmp_xml("h1", cur_node->parent->name)) {
-        link->prop |= P_SPLIT;
-        link->indent = indent;
-      }
     }
 
     if (link->buf->size == 0) {
@@ -428,25 +402,25 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
 }
 
 
-int view(const struct mdn_cfg *config, const struct buf *ob, int href_count)
+int view(const struct buf *ob, int href_count)
 {
-  struct frame_main      mdn   = {NULL, NULL, 0, 0, 0, 0};
-  struct frame *         page;              /* content container */
-  struct frame *         status;            /* status line container */
-  struct frame *         probe = NULL;
+  struct display         pov = {NULL, NULL, 0, 0, 0, 0};
+  struct frame *         page;   /* content container */
+  struct frame *         status; /* status line container */
+  struct frame *         probe;
   struct dom_href_stack *link = NULL;
   struct dom_link *      content;
+  struct mdn_cfg *       config;
   struct stack           ref_stack;
   htmlDocPtr             doc;
   htmlNodePtr            rootNode;
   MEVENT                 event;
   mdn_command            cmd;               /* command enum */
   mdn_command            prev_cmd = CMD_OK; /* previous command */
-  int                    height;            /* stdscr height */
-  int                    width;             /* stdscr width */
   int                    update = TRUE;     /* control needs to update */
-  int                    stack_index = 0;
-
+  int                    stack_index = -1;
+  mmask_t                mouse = 0;
+  
   LIBXML_TEST_VERSION;
   /* Grow DOM tree; */
   doc = htmlReadMemory((char *)(ob->data), (int)(ob->size),
@@ -463,39 +437,38 @@ int view(const struct mdn_cfg *config, const struct buf *ob, int href_count)
     return EXIT_FAILURE;
   }
 
-  stack_init(&ref_stack, href_count);
+  config = configure();
+
+  dom_stack_new(&ref_stack, href_count);
   content = content_setup(rootNode, config->indent, &ref_stack);
 
   setlocale(LC_ALL, "");
-
   newterm(NULL, stdout, stderr);
   noecho();             /* disable echo of keyboard typing */
   keypad(stdscr, TRUE); /* enable arrow keys */
   timeout(200);
   cbreak();
   if (config->use_mouse)
-    mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
-  // halfdelay(1);
-  // curs_set(0);
+    mouse = mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
 
   create_color_pairs();
 
-  get_display_size(height, width);
+  get_display_size(&pov);
 
-  page        = frame_new(FRAME_PAGE, (int)ob->size / width, width, 0, 0);
-  page->win   = newpad(page->height, page->width);
+  page   = frame_new(FRAME_PAGE, (int)ob->size / pov.max_x, pov.max_x, 0, 0);
+  status = frame_new(FRAME_STATS, 1, pov.max_x, pov.max_y, 0);
+  probe  = frame_new(FRAME_PROBE, 4, pov.max_x, pov.max_y - 4, 0);
 
-  status      = frame_new(FRAME_STATS, 1, width, height, 0);
-  status->win = newwin(status->height, status->width, status->cur_y, status->cur_x);
-  scrollok(status->win, TRUE);
-  wattrset(status->win, status->attr);
+  page->win   = newpad(page->max_y, page->max_x);
+  wattrset(page->win, frame_type[page->type].at);
 
-  probe        = frame_new(FRAME_NONE, 4, width, height - 4, 0);
-  probe->win   = newwin(probe->height, probe->width, probe->beg_y, probe->beg_x);
-  probe->cur_y = probe->cur_x = 1;
+  status->win = newwin(status->max_y, status->max_x, status->beg_y, status->beg_x);
+  wattrset(status->win, frame_type[status->type].at);
 
-  mdn.pad = page;
-  mdn.bar = status;
+  probe->win   = newwin(probe->max_y, probe->max_x, probe->beg_y, probe->beg_x);
+
+  pov.pad = page;
+  pov.bar = status;
   render_page(page, content, &ref_stack);
 
   refresh();
@@ -524,8 +497,8 @@ int view(const struct mdn_cfg *config, const struct buf *ob, int href_count)
     }
 
     if (cmd == CMD_EXIT) {
-      if (mdn.pad != page) {
-        mdn.pad = page;
+      if (pov.pad != page) {
+        pov.pad = page;
         cmd = CMD_OK;
       }
       else {
@@ -533,82 +506,91 @@ int view(const struct mdn_cfg *config, const struct buf *ob, int href_count)
       }
     }
 
+    if ((cmd == CMD_MOUSE_TOGGLE) && config->use_mouse) {
+      if (mouse == 0)
+        mouse = mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, &event.bstate);
+      else
+        mouse = mousemask(0, &event.bstate);
+    }
       if (cmd == CMD_MOUSE_EVENT) {
         if (getmouse(&event) == OK) {
           if (event.bstate & MOUSE_WHEEL_UP)
-            cmd = CMD_GOTO_UP;
+            cmd = CMD_MOVE_UP;
           else if (event.bstate & MOUSE_WHEEL_DOWN)
-            cmd = CMD_GOTO_DOWN;
-          else if ((event.bstate & BUTTON1_CLICKED) && (event.bstate & BUTTON_CTRL)) {
-            link = dom_stack_find(&ref_stack, stack_index, page->cur_y, page->cur_y + height, event.x);
-            stack_index = link->index + 1;
+            cmd = CMD_MOVE_DOWN;
+          else if ((event.bstate & BUTTON1_DOUBLE_CLICKED)) {
+            link = dom_stack_find(&ref_stack, 0, page->cur_y, page->cur_y + pov.max_y, page->cur_y + event.y, event.x);
 
             if (link != NULL) {
-              mdn.cur_y = link->beg_y - page->cur_y;
-              mdn.cur_x = link->beg_x - page->cur_x;
-              move(mdn.cur_y, mdn.cur_x);
+              pov.cur_y = event.y;
+              pov.cur_x = event.x;
+              move(pov.cur_y, pov.cur_x);
+              cmd = CMD_COMFIRM;
             }
-            cmd = CMD_SELECT_COMFIRM;
           }
         }
       }
   
       switch (cmd) {
         case CMD_SELECT_HREF: {
-          link = dom_stack_find(&ref_stack, stack_index, page->cur_y, page->cur_y + height, event.x);
-          stack_index = link->index + 1;
+          link = dom_stack_find(&ref_stack, stack_index, page->cur_y, page->cur_y + pov.max_y, -1, -1);
 
           if (link != NULL) {
-            mdn.cur_y = link->beg_y - page->cur_y;
-            mdn.cur_x = link->beg_x - page->cur_x;
-            move(mdn.cur_y, mdn.cur_x);
+            stack_index = link->index;
+            pov.cur_y = link->end_y - page->cur_y;
+            pov.cur_x = link->end_x - page->cur_x;
+            move(pov.cur_y, pov.cur_x);
           }
         break;
       }
-      case CMD_SELECT_COMFIRM: {
+      case CMD_COMFIRM: {
+        werase(probe->win);
+        box(probe->win, ' ', 0);
+        wattron(probe->win, frame_type[probe->type].at);
+        mvwprintw(probe->win, probe->cur_y, probe->cur_x + 2, frame_type[probe->type].name);
+        wattroff(probe->win, frame_type[probe->type].at);
+
         if (link != NULL) {
-          mvwprintw(probe->win, probe->cur_y, probe->cur_x, (char *)link->url->data);
-          wclrtobot(probe->win);
+          mvwprintw(probe->win, probe->cur_y + 1, probe->cur_x, (char *)link->url->data);
         }
-        box(probe->win, 0, 0);
-        mvwprintw(probe->win, probe->cur_y - 1, 2, frame_type[FRAME_PROBE]);
+
         break;
       }
-      case CMD_GOTO_DOWN: {
+      case CMD_MOVE_DOWN: {
         scroll_down(page);
         break;
       }
-      case CMD_GOTO_UP: {
+      case CMD_MOVE_UP: {
         scroll_up(page);
         break;
       }
-      case CMD_GOTO_NPAGE: {
-        if (page->cur_y + ((height - 1) << 1) < page->height)
-          page->cur_y += (height - 1);
+      case CMD_MOVE_NPAGE: {
+        if (page->cur_y + ((pov.max_y - 1) << 1) < page->max_y)
+          page->cur_y += (pov.max_y - 1);
         else
-          page->cur_y = page->height - height;
+          page->cur_y = page->max_y - pov.max_y;
         break;
       }
-      case CMD_GOTO_PPAGE: {
-        if (page->cur_y - (height - 1) > 0)
-          page->cur_y -= (height - 1);
+      case CMD_MOVE_PPAGE: {
+        if (page->cur_y - (pov.max_y - 1) > 0)
+          page->cur_y -= (pov.max_y - 1);
         else
           page->cur_y = 0;
         break;
       }
-      case CMD_GOTO_TOF: {
+      case CMD_MOVE_TOP: {
         page->cur_y = 0;
         break;
       }
-      case CMD_GOTO_EOF: {
-        page->cur_y = page->height - height;
+      case CMD_MOVE_EOF: {
+        page->cur_y = page->max_y - pov.max_y;
         break;
       }
       case CMD_RESIZE_EVENT: {
         update = TRUE;
-        get_display_size(height, width);
-        mvwin(status->win, height, 0);
-        mvwin(probe->win, height - 4, 0);
+        get_display_size(&pov);
+        mvwin(status->win, pov.max_y, 0);
+        mvwin(probe->win, pov.max_y - 4, 0);
         break;
       }
       case CMD_ERR: {
@@ -616,10 +598,8 @@ int view(const struct mdn_cfg *config, const struct buf *ob, int href_count)
           update = !update;
           cmd    = CMD_OK;
           if (prev_cmd == CMD_RESIZE_EVENT) {
-              page->width = width;
-              // page->height = blocks;
-              wresize(page->win, page->height, page->width);
-              // wresize(status->win, status->height, status->width);
+              page->max_x = pov.max_x;
+              wresize(page->win, page->max_y, page->max_x);
               wclear(page->win);
               render_page(page, content, &ref_stack);
           }
@@ -632,22 +612,23 @@ int view(const struct mdn_cfg *config, const struct buf *ob, int href_count)
     }
 
     if (cmd != CMD_ERR) {
-      if (cmd == CMD_SELECT_COMFIRM) {
-        mdn.bar = probe;
-      }
+      if (cmd == CMD_COMFIRM)
+        pov.bar = probe;
       else {
-        if (mdn.bar != status) mdn.bar = status;
-        if (height >= page->height)
-          wprintw(mdn.bar->win, "\n%s(ALL) (q to quit)", frame_type[page->frame_type]);
+        pov.bar = status;
+        werase(status->win);
+        waddstr(status->win, frame_type[page->type].name);
+        if (pov.max_y >= page->max_y)
+          waddstr(status->win, "(ALL) (q to quit)");
         else if (page->cur_y <= 0)
-          wprintw(mdn.bar->win, "\n%s(TOP) (q to quit)", frame_type[page->frame_type]);
-        else if (page->cur_y + height < page->height)
-          wprintw(mdn.bar->win, "\n%s(%d%%) (q to quit)", frame_type[page->frame_type], ((page->cur_y + height) * 100) / page->height);
+          waddstr(pov.bar->win, "(TOP) (q to quit)");
+        else if (page->cur_y + pov.max_y < page->max_y)
+          wprintw(status->win, "(%d%%) (q to quit)", ((page->cur_y + pov.max_y) * 100) / page->max_y);
         else
-          wprintw(mdn.bar->win, "\n%s(END) (q to quit)", frame_type[page->frame_type]);
+          waddstr(status->win, "(END) (q to quit)");
       }
-      pnoutrefresh(page->win, page->cur_y, 0, 0, 0, height - mdn.bar->height, width);
-      wnoutrefresh(mdn.bar->win);
+      pnoutrefresh(page->win, page->cur_y, 0, 0, 0, pov.max_y - pov.bar->max_y, pov.max_x);
+      wnoutrefresh(pov.bar->win);
     }
     prev_cmd = cmd;
     doupdate();

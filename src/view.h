@@ -55,6 +55,7 @@ enum node_t {
   N_INS,
   N_DEL,
   N_PRE,
+  N_CODE,
   N_KBD,
 
   N_HEADING,
@@ -63,24 +64,25 @@ enum node_t {
 
 struct frame {
   WINDOW *win;
-  attr_t  attr;
-  int     frame_type;
-  int     height;
-  int     width;
+  int     type;
+  int     max_y;
+  int     max_x;
   int     beg_y;
   int     beg_x;
   int     cur_y;
   int     cur_x;
 };
 
-struct frame_main {
+struct display {
   struct frame* pad;
   struct frame* bar;
-  int     height;
-  int     width;
+  int     max_y;
+  int     max_x;
   int     cur_y;
   int     cur_x;
 };
+
+int view(const struct buf *, int);
 
 #ifdef __cplusplus
 }

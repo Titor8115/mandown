@@ -38,8 +38,9 @@ extern "C" {
 #define P_END_A     MANDOWN_BITS(0, 1)
 #define P_BEG_A     MANDOWN_BITS(1, 1)
 #define P_SPLIT     MANDOWN_BITS(1, 2)
-#define P_SELF_FORM MANDOWN_BITS(1, 3)
-#define P_HYPERLINK MANDOWN_BITS(1, 4)
+#define P_PREFIXED  MANDOWN_BITS(1, 3)
+#define P_SECTION   MANDOWN_BITS(1, 4)
+#define P_HYPERLINK MANDOWN_BITS(1, 5)
 
 struct dom_link {
   struct dom_link *next;
@@ -54,6 +55,8 @@ struct dom_href_stack {
   size_t      index;
   int         beg_y;
   int         beg_x;
+  int         end_y;
+  int         end_x;
 };
 
 struct dom_link *dom_link_new(struct buf *);
@@ -80,7 +83,7 @@ struct dom_href_stack *dom_stack_top(struct stack *);
 
 struct dom_href_stack *dom_stack_bot(struct stack *);
 
-struct dom_href_stack *dom_stack_find(struct stack *, size_t, int, int, int);
+struct dom_href_stack *dom_stack_find(struct stack *, size_t, int, int, int, int);
 
 void dom_stack_free(struct stack *);
 

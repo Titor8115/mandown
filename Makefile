@@ -62,12 +62,14 @@ LIBS      = $(CURSES_LIBS) $(XML2_LIBS) $(CONFIG_LIBS)
 
 # OS-specific additions
 ifeq ($(UNAME_S),Linux)
+	DEFINES += -DLINUX
 	ifeq ($(shell ldconfig -p | grep libncursesw),)
 		CURSES   = ncurses
 	else
 		CURSES   = ncursesw
 	endif
 else ifeq ($(UNAME_S),Darwin)
+	DEFINES += -DMACOS
 	CURSES   = ncurses
 else
 CURSES   = ncurses
@@ -90,10 +92,11 @@ OBJECTS  = $(SOURCES:%.c=$O/%.o)
 
 .SECONDEXPANSION:
 .PRECIOUS: $O/%
-.PHONY: all clean install uninstall
+.PHONY: all debug clean install uninstall
 
 all: $(TARGET)
-
+debug: DEFINES += -DDEBUG
+debug: $(TARGET)
 # executables
 $(TARGET): $(OBJECTS)
 	@$(MKDIR_P) $(CONFIGDIR)

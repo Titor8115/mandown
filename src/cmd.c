@@ -24,6 +24,9 @@
 mdn_command less_cmd_scheme(int key)
 {
   switch (key) {
+    case 'i': {
+      return CMD_MOUSE_TOGGLE;
+    }
     case 'q': {
       return CMD_EXIT;
     }
@@ -31,34 +34,34 @@ mdn_command less_cmd_scheme(int key)
       return CMD_SELECT_HREF;
     }
     case ENTER: {
-      return CMD_SELECT_COMFIRM;
+      return CMD_COMFIRM;
     }
     case 'e':
     case 'j':
     case KEY_DOWN: {
-      return CMD_GOTO_DOWN;
+      return CMD_MOVE_DOWN;
     }
     case 'y':
     case 'k':
     case KEY_UP: {
-      return CMD_GOTO_UP;
+      return CMD_MOVE_UP;
     }
     case 'f':
     case ' ': 
     case KEY_NPAGE: {
-      return CMD_GOTO_NPAGE;
+      return CMD_MOVE_NPAGE;
     }
     case 'b':
     case KEY_PPAGE: {
-      return CMD_GOTO_PPAGE;
+      return CMD_MOVE_PPAGE;
     }
     case 'g':
     case KEY_HOME: {
-      return CMD_GOTO_TOF;
+      return CMD_MOVE_TOP;
     }
     case 'G':
     case KEY_END: {
-      return CMD_GOTO_EOF;
+      return CMD_MOVE_EOF;
     }
     case KEY_RESIZE: {
       return CMD_RESIZE_EVENT;
@@ -76,6 +79,9 @@ mdn_command less_cmd_scheme(int key)
 mdn_command mdn_cmd_scheme(int key)
 {
   switch (key) {
+    case 'i': {
+      return CMD_MOUSE_TOGGLE;
+    }
     case 'q': {
       return CMD_EXIT;
     }
@@ -83,31 +89,31 @@ mdn_command mdn_cmd_scheme(int key)
       return CMD_SELECT_HREF;
     }
     case ENTER: {
-      return CMD_SELECT_COMFIRM;
+      return CMD_COMFIRM;
     }
     case 's':
     case KEY_DOWN: {
-      return CMD_GOTO_DOWN;
+      return CMD_MOVE_DOWN;
     }
     case 'w':
     case KEY_UP: {
-      return CMD_GOTO_UP;
+      return CMD_MOVE_UP;
     }
     case 'S':
     case KEY_NPAGE: {
-      return CMD_GOTO_NPAGE;
+      return CMD_MOVE_NPAGE;
     }
     case 'W':
     case KEY_PPAGE: {
-      return CMD_GOTO_PPAGE;
+      return CMD_MOVE_PPAGE;
     }
     case 'g':
     case KEY_HOME: {
-      return CMD_GOTO_TOF;
+      return CMD_MOVE_TOP;
     }
     case 'G':
     case KEY_END: {
-      return CMD_GOTO_EOF;
+      return CMD_MOVE_EOF;
     }
     case KEY_RESIZE: {
       return CMD_RESIZE_EVENT;
@@ -125,14 +131,42 @@ mdn_command mdn_cmd_scheme(int key)
 mdn_command vim_cmd_scheme(int key)
 {
   switch (key) {
+    case 'i': {
+      return CMD_MOUSE_TOGGLE;
+    }
+
     case 'q': {
       return CMD_EXIT;
+    }
+    case 'j': {
+      return CMD_MOVE_DOWN;
+    }
+    case 'k': {
+      return CMD_MOVE_UP;
+    }
+    case 'g': {
+      return CMD_MOVE_TOP;
+    }
+    case 'G': {
+      return CMD_MOVE_EOF;
+    }
+    case CTRL('b'): {
+      return CMD_MOVE_PPAGE;
+    }
+    case CTRL('f'): {
+      return CMD_MOVE_NPAGE;
     }
     case TAB: {
       return CMD_SELECT_HREF;
     }
     case ENTER: {
-      return CMD_SELECT_COMFIRM;
+      return CMD_COMFIRM;
+    }
+    case KEY_RESIZE: {
+      return CMD_RESIZE_EVENT;
+    }
+    case KEY_MOUSE: {
+      return CMD_MOUSE_EVENT;
     }
     default: {
       return CMD_ERR;

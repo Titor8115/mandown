@@ -27,7 +27,9 @@
 #include <unistd.h>
 
 #include "blender.h"
+#include "buffer.h"
 #include "markdown.h"
+#include "view.h"
 
 void usage()
 {
@@ -76,18 +78,11 @@ get_file_ext(const char *file, const char ext)
 
 int main(int argc, char **argv)
 {
-#ifdef DEBUG
-
-  int pfd[2];
-  pid_t pid;
-
-#endif
   FILE *                   fp_in;
   FILE *                   fp_out;
   struct buf *             ib;
   struct buf *             ob;
   struct sd_markdown *     markdown;
-  struct mdn_cfg *         setting;
   struct sd_callbacks      callbacks;
   struct blender_renderopt options;
   const char *             in    = NULL;
@@ -97,7 +92,7 @@ int main(int argc, char **argv)
   int                      opt;
   int                      mode  = PAGE_MODE;
   int                      ret   = EXIT_FAILURE;
-  unsigned int             extensions = MKDEXT_NO_INTRA_EMPHASIS | MKDEXT_TABLES | MKDEXT_AUTOLINK | MKDEXT_STRIKETHROUGH;
+  unsigned int             extensions = MKDEXT_FENCED_CODE | MKDEXT_NO_INTRA_EMPHASIS | MKDEXT_TABLES | MKDEXT_AUTOLINK | MKDEXT_STRIKETHROUGH;
 
   while ((opt = getopt(argc, argv, ":f:ho:")) != -1) {
     switch (opt) {
@@ -140,7 +135,7 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
     /* Reading file */
-    fp_in = fopen(in, "r+");
+    fp_in = fopen(in, "r");
     if (!fp_in) {
       sderror(strerror(errno));
       return EXIT_FAILURE;
@@ -202,8 +197,7 @@ int main(int argc, char **argv)
   }
 
   else {  /* output to mandown pager */
-    setting = configure();
-    ret = view(setting, ob, href);
+    ret = view(ob, href);
   }
 
   /* Clean up */

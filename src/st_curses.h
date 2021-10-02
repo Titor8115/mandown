@@ -28,9 +28,11 @@
 extern "C" {
 #endif
 
+#define ALT_ESC    27
 #define TAB        9
 #define ENTER      10
-#define CTRL(c)    ((c) & 0x1f)
+#define CONTROL    0x1f
+#define CTRL(c)    ((c) & CONTROL)
 #define MOUSE_WHEEL_UP   0x00080000
 #define MOUSE_WHEEL_DOWN 0x08000000
 

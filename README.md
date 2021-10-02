@@ -23,7 +23,7 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 Current version is still being developed for some HTML tags. However, it should work on most Markdown documents.
 
 ### Homebrew
-```
+```shell
 $ brew install mandown
 ```
 
@@ -81,26 +81,12 @@ Mandown requires `libncurses(w)` and `libxml2` as compile-time dependencies.
 
 Make sure you have them installed before compiling.
 
-### Homebrew
-**From source**
-
-```shell
-$ brew install ncurses
-$ brew install libxml2-dev
-```
-**Precompiled binary**
-```shell
-$ brew install mandown
-```
-
-
 ### Debian
 
 ```shell
 $ apt-get install libncursesw5-dev
 $ apt-get install libxml2-dev
 ```
-
 
 ## Todo
 

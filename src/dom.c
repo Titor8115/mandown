@@ -19,10 +19,6 @@
 
 #include "dom.h"
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-
 struct dom_link *
 dom_link_new(struct buf *buf)
 {
@@ -136,7 +132,7 @@ dom_stack_bot(struct stack *st)
 }
 
 struct dom_href_stack *
-dom_stack_find(struct stack *st, size_t start, int mincol, int maxcol, int x)
+dom_stack_find(struct stack *st, size_t start, int mincol, int maxcol, int y, int x)
 {
   size_t                 i;
   struct dom_href_stack *tmp;
@@ -144,22 +140,31 @@ dom_stack_find(struct stack *st, size_t start, int mincol, int maxcol, int x)
   if (!st->size)
     return NULL;
 
-  for (i = start; i < st->size; i++) {
-    tmp = st->item[i];
-    if ((mincol <= tmp->beg_y) && (tmp->beg_y <= maxcol) && (tmp != st->item[start])) {
-      if (x == tmp->beg_x)
+  if ((y != -1) && (x != -1)) {
+    for (i = start; i < st->size; i++) {
+      tmp = st->item[i];
+      if ((tmp->beg_y <= y) && (tmp->end_y >= y) && (tmp->beg_x <= x) && (tmp->end_x >= x)) {
+            return tmp;
+      }
+    }
+    return NULL;
+  }
+  else {
+    for (i = start; i < st->size; i++) {
+      tmp = st->item[i];
+      if ((mincol <= tmp->beg_y) && (tmp->beg_y <= maxcol) && (tmp != st->item[start])) {
+          return tmp;
+      }
+    }
+
+    for (i = 0; i < st->size; i++) {
+      tmp = st->item[i];
+      if ((mincol <= tmp->beg_y) && (tmp->beg_y <= maxcol)) {
         return tmp;
+      }
     }
+    return NULL;
   }
-
-  for (i = 0; i < st->size; i++) {
-    tmp = st->item[i];
-    if ((mincol <= tmp->beg_y) && (tmp->beg_y <= maxcol)) {
-      return tmp;
-    }
-  }
-
-  return st->item[start];
 }
 
 void dom_stack_free(struct stack *st)

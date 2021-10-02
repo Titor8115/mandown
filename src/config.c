@@ -19,7 +19,6 @@
 
 #include "config.h"
 
-#include <libconfig.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,16 +58,23 @@ void sd_warn(char *output)
 struct mdn_cfg *
 get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp)
 {
+  config_t update;
   config_setting_t *setting;
 
+  config_init(&update);
   setting = config_lookup(user, "use_mouse");
   if (!setting) {
     if (fp != NULL) {
-      fprintf(fp,
-              "# If you want Terminal Emulator handle mouse event"
-              "# turn off \"use_mouse\"\n"
-              "use_mouse = %s;\n\n",
-              (default_cfg.use_mouse ? "true" : "false"));
+      // fputs("# If you want Terminal Emulator handle mouse event\n# turn off \"use_mouse\"\n", fp);
+      // setting = config_setting_add(&update.root, "use_mouse", CONFIG_TYPE_BOOL);
+      // config_setting_set_bool(setting, default_cfg.use_mouse);
+      // config_write(&update, fp);
+      // config_setting_remove(&update.root, "use_mouse");
+          fprintf(fp,
+                  "# If you want Terminal Emulator handle mouse event\n"
+                  "# turn off \"use_mouse\"\n"
+                  "use_mouse = %s;\n\n",
+                  (default_cfg.use_mouse ? "true" : "false"));
     }
   }
   else
@@ -110,9 +116,15 @@ configure()
   FILE *fp_rc;
 
   /* Setup default path for rc file based on user */
+#ifdef DEBUG
+  rc_path = malloc(strlen(getenv("PWD")) + strlen(RC_PREFIX) + 1);
+  strcpy(rc_path, getenv("PWD"));
+  strcat(rc_path, RC_PREFIX);
+#else
   rc_path = malloc(strlen(getenv("HOME")) + strlen(RC_PREFIX) + 1);
   strcpy(rc_path, getenv("HOME"));
   strcat(rc_path, RC_PREFIX);
+#endif
 
   config_init(&cfg);
   fp_rc = fopen(rc_path, "a+");
@@ -122,11 +134,11 @@ configure()
   else {
     config_read(&cfg, fp_rc);
     get_user_rc(&cfg, &default_cfg, fp_rc);
+    fclose(fp_rc);
   }
   // }
 
   /* Clean up */
-  fclose(fp_rc);
   config_destroy(&cfg);
   free(rc_path);
   return &default_cfg;
