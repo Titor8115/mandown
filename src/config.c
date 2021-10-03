@@ -24,11 +24,11 @@
 #include <string.h>
 #include <unistd.h>
 
-static struct mdn_cfg default_cfg =
-{
-  .use_mouse = CONFIG_TRUE,
-  .indent = 7,
-  .control_scheme = "less"
+static struct mdn_cfg rc_rule =
+    {
+        .use_mouse = CONFIG_TRUE,
+        .indent = 7,
+        .control_scheme = "less",
 };
 
 void sd_info(char *output)
@@ -67,30 +67,30 @@ get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp)
     if (fp != NULL) {
       // fputs("# If you want Terminal Emulator handle mouse event\n# turn off \"use_mouse\"\n", fp);
       // setting = config_setting_add(&update.root, "use_mouse", CONFIG_TYPE_BOOL);
-      // config_setting_set_bool(setting, default_cfg.use_mouse);
+      // config_setting_set_bool(setting, rc_rule.use_mouse);
       // config_write(&update, fp);
       // config_setting_remove(&update.root, "use_mouse");
-          fprintf(fp,
-                  "# If you want Terminal Emulator handle mouse event\n"
-                  "# turn off \"use_mouse\"\n"
-                  "use_mouse = %s;\n\n",
-                  (default_cfg.use_mouse ? "true" : "false"));
+      fprintf(fp,
+              "# If you want Terminal Emulator handle mouse event\n"
+              "# turn off \"use_mouse\"\n"
+              "use_mouse = %s;\n\n",
+              (rc_rule.use_mouse ? "true" : "false"));
     }
   }
   else
-    default_cfg.use_mouse = config_setting_get_bool(setting);
+    rc_rule.use_mouse = config_setting_get_bool(setting);
 
   setting = config_lookup(user, "indent");
-  if (!config_lookup_int(user, "indent", &(default_cfg.indent))) {
+  if (!config_lookup_int(user, "indent", &(rc_rule.indent))) {
     if (fp != NULL) {
       fprintf(fp,
               "# Indent controls where manual's content start for each line\n"
               "indent = %d;\n\n",
-              default_cfg.indent);
+              rc_rule.indent);
     }
   }
   else
-    default_cfg.indent = config_setting_get_int(setting);
+    rc_rule.indent = config_setting_get_int(setting);
 
   setting = config_lookup(user, "control_scheme");
   if (!setting) {
@@ -98,11 +98,11 @@ get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp)
       fprintf(fp,
               "# Supported Keybinding: \"mdn\", \"vim\", \"less\"\n"
               "control_scheme = \"%s\";\n\n",
-              default_cfg.control_scheme);
+              rc_rule.control_scheme);
     }
   }
   else {
-    default_cfg.control_scheme[0] = config_setting_get_string(setting)[0];
+    rc_rule.control_scheme[0] = config_setting_get_string(setting)[0];
   }
 
   return config;
@@ -133,13 +133,11 @@ configure()
   }
   else {
     config_read(&cfg, fp_rc);
-    get_user_rc(&cfg, &default_cfg, fp_rc);
+    get_user_rc(&cfg, &rc_rule, fp_rc);
     fclose(fp_rc);
   }
-  // }
-
   /* Clean up */
   config_destroy(&cfg);
   free(rc_path);
-  return &default_cfg;
+  return &rc_rule;
 }

@@ -21,7 +21,9 @@
 #define MDN_CONFIG_H
 
 #include <libconfig.h>
+
 #include "buffer.h"
+#include "st_curses.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,18 +42,32 @@ extern "C" {
 #define SCHEME_MDN 0
 #define SCHEME_LESS 1
 #define SCHEME_VIM 2
-
-struct scheme {
-  int key;
-  int command;
-  struct buf *str_form;
+#ifdef DEBUG
+struct color_pair_t {
+  short fg;
+  short bg;
 };
 
+struct color_t {
+  struct color_pair_t text;
+  struct color_pair_t header;
+  struct color_pair_t link;
+  struct color_pair_t code;
+};
+
+#endif
+
+
 struct mdn_cfg {
-  struct scheme map[14];
-  char  control_scheme[5];
-  int   use_mouse;
-  int   indent;
+  #ifdef DEBUG
+  struct color_pair_t pager;
+  struct color_t color;
+
+#endif
+  
+  char   control_scheme[5];
+  int    use_mouse;
+  int    indent;
 };
 
 void sd_info(char *);

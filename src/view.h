@@ -20,7 +20,6 @@
 #ifndef MDN_VIEW_H
 #define MDN_VIEW_H
 
-#include "config.h"
 #include "st_curses.h"
 #include "dom.h"
 
@@ -41,11 +40,10 @@ enum color_set {
 };
 
 enum frame_type {
-  FRAME_NONE = 0,
-  FRAME_HELP,
-  FRAME_STATS,
-  FRAME_PAGE,
-  FRAME_PROBE,
+  FRAME_WIN = 0,
+  FRAME_SWIN,
+  FRAME_PAD,
+  FRAME_SPAD
 };
 
 enum node_t {
@@ -58,7 +56,7 @@ enum node_t {
   N_CODE,
   N_KBD,
 
-  N_HEADING,
+  N_HEAD,
   N_HREF
 };
 
@@ -69,15 +67,6 @@ struct frame {
   int     max_x;
   int     beg_y;
   int     beg_x;
-  int     cur_y;
-  int     cur_x;
-};
-
-struct display {
-  struct frame* pad;
-  struct frame* bar;
-  int     max_y;
-  int     max_x;
   int     cur_y;
   int     cur_x;
 };
