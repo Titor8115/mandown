@@ -656,7 +656,14 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 	/* finding the next delimiter */
 	i = 0;
 	for (end = nb; end < size && i < nb; end++) {
-		if (data[end] == '`') i++;
+		if (data[end] == '`') { 
+			if (end + nb < size && data[end+nb] == ' ') {
+				data[end] = data[end+nb];
+				data[end+nb] = '`';
+				end++;
+			}
+			i++;
+		}
 		else i = 0;
 	}
 
@@ -669,7 +676,7 @@ char_codespan(struct buf *ob, struct sd_markdown *rndr, uint8_t *data, size_t of
 		f_begin++;
 
 	f_end = end - nb;
-	while (f_end > nb && data[f_end-1] == ' ')
+	while (f_end > nb && data[f_end] == ' ')
 		f_end--;
 
 	/* real code span */
