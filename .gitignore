@@ -4,3 +4,6 @@ test/
 build/
 build.d
 mdn
+.cache/
+.clang-format
+compile_commands.json
