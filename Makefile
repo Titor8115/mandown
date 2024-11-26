@@ -25,6 +25,10 @@
 MAKEFLAGS += -rR
 
 TARGET = mdn
+BASENAME = mandown
+LIB_A = lib$(BASENAME).a
+LIB_SO = lib$(BASENAME).$(SOEXT)
+
 O = build
 
 UNAME_S := $(shell uname -s 2>/dev/null || echo not)
@@ -37,6 +41,8 @@ CONFIGDIR = ~/.config/mdn
 prefix      = $(PREFIX)
 exec_prefix = $(prefix)
 bindir      = $(exec_prefix)/bin
+incdir      = $(prefix)/include
+libdir      = $(exec_prefix)/lib
 
 # tools
 CC         = gcc
@@ -53,9 +59,9 @@ OPT       = -O3
 DBGSYMS   = -g
 WARNINGS  = -Wall -Wextra -Wpointer-arith -Wundef -Wno-unused-parameter
 DEPENDS   = -MMD -MP
-INCLUDES  = -Iparser -Iblender
+INCLUDES  = -Iparser -Iblender -Isrc
 DEFINES   =
-CFLAGS    = $(OPT) -pipe $(DBGSYMS) $(WARNINGS) $(DEPENDS) $(INCLUDES) $(DEFINES)
+CFLAGS    = $(OPT) -fPIC -pipe $(DBGSYMS) $(WARNINGS) $(DEPENDS) $(INCLUDES) $(DEFINES)
 CFLAGS   += $(CURSES_CFLAGS) $(XML2_CFLAGS) $(CONFIG_CFLAGS)
 LDFLAGS   = $(OPT) $(DBGSYMS)
 LIBS      = $(CURSES_LIBS) $(XML2_LIBS) $(CONFIG_LIBS)
@@ -68,9 +74,13 @@ ifeq ($(UNAME_S),Linux)
 	else
 		CURSES   = ncursesw
 	endif
+	SOEXT    = so
+	SHLFLAGS = -shared
 else ifeq ($(UNAME_S),Darwin)
 	DEFINES += -DMACOS
 	CURSES   = ncurses
+	SOEXT    = dylib
+	SHLFLAGS = -dynamiclib
 else
 CURSES   = ncurses
 endif
@@ -87,8 +97,12 @@ CONFIG_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags libconfig))
 CONFIG_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs libconfig),-lconfig)
 
 # sources
-SOURCES := $(sort $(wildcard src/*.c blender/*.c parser/*.c))
-OBJECTS  = $(SOURCES:%.c=$O/%.o)
+LIB_SOURCES := $(sort $(wildcard src/*.c blender/*.c parser/*.c))
+CLI_SOURCES := $(wildcard cli/*.c)
+SOURCES     := $(LIB_SOURCES) $(CLI_SOURCES)
+LIB_OBJECTS  = $(LIB_SOURCES:%.c=$O/%.o)
+CLI_OBJECTS  = $(CLI_SOURCES:%.c=$O/%.o)
+OBJECTS      = $(SOURCES:%.c=$O/%.o)
 
 .SECONDEXPANSION:
 .PRECIOUS: $O/%
@@ -98,12 +112,26 @@ all: $(TARGET)
 debug: DEFINES += -DDEBUG
 debug: $(TARGET)
 # executables
-$(TARGET): $(OBJECTS)
+$(TARGET): $(CLI_OBJECTS) $(LIB_A)
 	@$(MKDIR_P) $(CONFIGDIR)
 	@echo
 	@echo "Formula:    " $@
 	@echo "Config dir: " $(CONFIGDIR)
 	@$(LD) -o $@ $(LDFLAGS) $^ $(LIBS)
+
+$(TARGET)_shlib: $(CLI_OBJECTS) $(LIB_SO)
+	@$(LD) -o $@ $(CLI_OBJECTS) -L. -lmandown $(LIBS)
+
+# libs
+$(LIB_A): $(LIB_OBJECTS)
+	ar r $@ $^
+
+$(LIB_SO): $(LIB_OBJECTS)
+ifeq ($(SOEXT), "")
+	$(error "Unable to build shared lib on $(UNAME_S))
+else
+	$(CC) $(SHLFLAGS) -o $@ $^ $(LIBS)
+endif
 
 # perfect hashing
 blender_blocks: parser/blender_blocks.h
@@ -116,15 +144,19 @@ $O/parser/markdown.o: parser/blender_blocks.h
 
 # housekeeping
 clean:
-	@echo "Remove:   " $O $(TARGET)
-	@$(RM_RF) $O $(TARGET)
+	@echo "Remove:   " $O $(TARGET) $(LIB_A) $(LIB_SO)
+	@$(RM_RF) $O $(TARGET) $(LIB_A) $(LIB_SO)
 
-install: $(TARGET)
-	$(INSTALL) -dm755 $(DESTDIR)$(bindir)
+install: $(TARGET) $(LIB_A) $(LIB_SO)
+	$(INSTALL) -dm755 $(DESTDIR)$(bindir) $(DESTDIR)$(incdir) $(DESTDIR)$(libdir)
 	$(INSTALL) -m755 $(TARGET) $(DESTDIR)$(bindir)/$(TARGET)
+	$(INSTALL) -m644 src/$(BASENAME).h $(DESTDIR)$(incdir)/$(BASENAME).h
+	$(INSTALL) -m644 $(LIB_A) $(LIB_SO) $(DESTDIR)$(libdir)
 
 uninstall:
 	$(RM_RF) $(DESTDIR)$(bindir)/$(TARGET)
+	$(RM_RF) $(DESTDIR)$(incdir)/$(BASENAME).h
+	$(RM_RF) $(DESTDIR)$(libdir)/$(LIB_A) $(DESTDIR)$(libdir)/$(LIB_SO)
 	$(RM_RF) $(CONFIGDIR)
 
 # automatic dependencies
