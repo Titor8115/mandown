@@ -77,7 +77,7 @@ To read detailed usage, run `mdn -h`
 
 ## Library dependency
 
-Mandown requires `libncurses(w)` and `libxml2` as compile-time dependencies.
+Mandown requires `libncurses(w)`, `libxml2` and `libconfig` as compile-time dependencies.
 
 Make sure you have them installed before compiling.
 
