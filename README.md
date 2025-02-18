@@ -116,6 +116,7 @@ Make sure you have them installed before compiling.
 ```shell
 $ apt-get install libncursesw5-dev
 $ apt-get install libxml2-dev
+$ apt-get install libconfig-dev
 ```
 
 ## Todo
