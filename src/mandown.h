@@ -1,34 +1,27 @@
-/**
- * Copyright (C) 2019 Tianze Han
- * 
- * This file is part of Mandown.
- * 
- * Mandown is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * Mandown is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with Mandown.  If not, see <http://www.gnu.org/licenses/>.
- */
+#ifndef MDN_LIB_H
+#define MDN_LIB_H
 
-#ifndef MDN_MANDOWN_H
-#define MDN_MANDOWN_H
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define PAGE_MODE 0
-#define FILE_MODE 1
+/*
+ * render_XXX: renders input to screen or file
+ *   fp    = open FILE *
+ *   str   = input string
+ *   ext   = type of buffer data
+ *           (supported: "html", "md", "txt")
+ *   title = title to display
+ *   out   = filename of output (NULL = display on screen)
+ */
+int render_file(FILE *fp, const char *ext, const char *title, const char *out);
+int render_str(const char *, const char *ext, const char *title, const char *out);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* MDN_MANDOWN_H */
+#endif /* MDN_LIB_H */

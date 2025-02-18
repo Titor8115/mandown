@@ -75,6 +75,36 @@ Exit: <kbd>q</kbd>
 
 To read detailed usage, run `mdn -h`
 
+## libmandown
+
+Mandown can also be embedded in your own applications. To render a Markdown document in a C string:
+
+```c
+#include "mandown.h"
+
+char *str ="# Heading\n\nThis is some **BOLD** *italic* ***EMPHASIZED*** text.";
+render_str(str, "md", "Test Title", NULL);
+```
+
+To render a Markdown document file:
+
+```c
+#include "mandown.h"
+
+FILE *fp = fopen("README.md", "r");
+render_file(fp, "md", "Test file", NULL);
+```
+
+Static and shared libraries are available. Make sure you have installed the dependencies listed in **Library dependency** below, then assuming you installed Mandown under `/usr/local`:
+
+```shell
+# static build
+gcc -o myprog -I/usr/local/include myprog.c /usr/local/lib/mandown.a -lncurses -lxml2 -lconfig
+
+# shared build
+gcc -o myprog -I/usr/local/include myprog.c -L/usr/local/lib -lmandown -lncurses -lxm2 -lconfig
+```
+
 ## Library dependency
 
 Mandown requires `libncurses(w)`, `libxml2` and `libconfig` as compile-time dependencies.
