@@ -18,6 +18,20 @@ Need to lookup things from README? Or from manual page? Or perhaps just want to 
 
 ![screenshot](./screenshot.png)
 
+## Library dependency
+
+Mandown requires `libncurses(w)`, `libxml2` and `libconfig` as compile-time dependencies.
+
+Make sure you have them installed before compiling.
+
+### Debian
+
+```shell
+$ apt-get install libncursesw5-dev
+$ apt-get install libxml2-dev
+$ apt-get install libconfig-dev
+```
+
 ## Installation
 
 Current version is still being developed for some HTML tags. However, it should work on most Markdown documents.
@@ -29,6 +43,7 @@ $ brew install mandown
 
 The installed binary `mdn` would be at `/usr/local/bin/`
 
+### Local
 ```shell
 $ git clone https://github.com/Titor8115/mandown.git
 $ cd mandown
@@ -75,7 +90,7 @@ Exit: <kbd>q</kbd>
 
 To read detailed usage, run `mdn -h`
 
-## libmandown
+## Embedding
 
 Mandown can also be embedded in your own applications. To render a Markdown document in a C string:
 
@@ -105,23 +120,14 @@ gcc -o myprog -I/usr/local/include myprog.c /usr/local/lib/mandown.a -lncurses -
 gcc -o myprog -I/usr/local/include myprog.c -L/usr/local/lib -lmandown -lncurses -lxm2 -lconfig
 ```
 
-## Library dependency
-
-Mandown requires `libncurses(w)`, `libxml2` and `libconfig` as compile-time dependencies.
-
-Make sure you have them installed before compiling.
-
-### Debian
-
-```shell
-$ apt-get install libncursesw5-dev
-$ apt-get install libxml2-dev
-$ apt-get install libconfig-dev
-```
+## Known issues
+- Red Hat Linux (Fedora) curses library wide characters support
 
 ## Todo
 
 - [x] Line fold/wrap on white space
 - [x] Optimized resizing
-- [ ] Table and contents rendering
 - [x] Makefile makeover
+- [ ] Add more config options
+- [ ] Table and contents rendering
+
