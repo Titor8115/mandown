@@ -85,7 +85,6 @@ int main(int argc, char **argv)
   const char *             ext   = "";
   const char *             title = "";
   int                      opt;
-  int                      ret   = EXIT_FAILURE;
 
   while ((opt = getopt(argc, argv, ":f:ho:")) != -1) {
     switch (opt) {
@@ -147,5 +146,5 @@ int main(int argc, char **argv)
     fclose(fp_in);
 
   // default_rc_free(setting);
-  return ret;
+  return EXIT_SUCCESS;
 }

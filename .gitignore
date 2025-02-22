@@ -7,3 +7,5 @@ mdn
 .cache/
 .clang-format
 compile_commands.json
+libmandown.a
+libmandown.so
