@@ -33,8 +33,8 @@ extern "C" {
 #define ENTER      10
 #define CONTROL    0x1f
 #define CTRL(c)    ((c) & CONTROL)
-#define MOUSE_WHEEL_UP   0x00080000
-#define MOUSE_WHEEL_DOWN 0x08000000
+/*#define MOUSE_WHEEL_UP   0x00080000*/
+/*#define MOUSE_WHEEL_DOWN 0x08000000*/
 
 #ifndef A_ITALIC
 #define A_ITALIC NCURSES_BITS(1U, 23)

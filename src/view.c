@@ -138,12 +138,6 @@ void frame_free(struct frame *part)
   free(part);
 }
 
-static inline void
-toggle_attr(WINDOW *dest, int toggle, int attributes)
-{
-  (toggle) ? wattron(dest, attributes) : wattroff(dest, attributes);
-}
-
 static void
 move_cursor(struct frame *pad, int cur_y, int cur_x)
 {
@@ -517,9 +511,9 @@ int view(const struct buf *ob, int href_count)
     }
       if (cmd == CMD_MOUSE_EVENT) {
         if (getmouse(&event) == OK) {
-          if (event.bstate & MOUSE_WHEEL_UP)
+          if (event.bstate & BUTTON4_PRESSED)
             cmd = CMD_MOVE_UP;
-          else if (event.bstate & MOUSE_WHEEL_DOWN)
+          else if (event.bstate & BUTTON5_PRESSED)
             cmd = CMD_MOVE_DOWN;
           else if ((event.bstate & BUTTON1_DOUBLE_CLICKED)) {
             link = dom_stack_find(&ref_stack, 0, page->cur_y, page->cur_y + height, page->cur_y + event.y, event.x);

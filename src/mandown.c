@@ -38,7 +38,9 @@ int render_buf(struct buf *ib, const char *ext, const char *title, const char *o
   struct sd_callbacks      callbacks;
   struct blender_renderopt options;
   int                      ret   = EXIT_FAILURE;
-  unsigned int             extensions = MKDEXT_FENCED_CODE | MKDEXT_NO_INTRA_EMPHASIS | MKDEXT_TABLES | MKDEXT_AUTOLINK | MKDEXT_STRIKETHROUGH;
+  unsigned int             extensions = MKDEXT_FENCED_CODE | MKDEXT_NO_INTRA_EMPHASIS |
+                                        MKDEXT_TABLES | MKDEXT_AUTOLINK |
+                                        MKDEXT_STRIKETHROUGH;
 
   ob = bufnew(OUTPUT_UNIT);
   if ((strcmp(ext, "html")) == 0) {
