@@ -22,21 +22,12 @@
 
 #include <libconfig.h>
 
-#include "buffer.h"
-#include "st_curses.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define READ_UNIT 1024
 #define OUTPUT_UNIT 64
-
-#ifdef DEBUG
-#define RC_PREFIX "/test/mdnrc.cfg"
-#else
-#define RC_PREFIX "/.config/mdn/mdnrc"
-#endif
 
 #define RC_VERSION "1.0.0"
 #define SCHEME_MDN 0
