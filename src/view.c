@@ -17,6 +17,7 @@
  * along with Mandown.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _XOPEN_SOURCE_EXTENDED 1
 #include "view.h"
 
 #include <libxml/HTMLparser.h>
@@ -27,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 #include "cmd.h"
 #include "config.h"
@@ -49,19 +51,19 @@ static const struct {short fg; short bg;} color_pairs[] =
   [C_CYAN]    = {COLOR_CYAN,          -1},
 };
 
-static const struct {char name[19]; attr_t at;} frame_type[] =
-{
-  [FRAME_WIN]  = {"",                 A_NORMAL},
-  [FRAME_PAD]  = {" Markdown page ",  A_NORMAL},
-  [FRAME_SWIN] = {" Markdown page ", A_REVERSE},
-};
+/*static const struct {char name[19]; attr_t at;} frame_type[] =*/
+/*{*/
+/*  [FRAME_WIN]  = {"",                 A_NORMAL},*/
+/*  [FRAME_PAD]  = {" Markdown page ",  A_NORMAL},*/
+/*  [FRAME_SWIN] = {" Markdown page ", A_REVERSE},*/
+/*};*/
 
 static const attr_t node_attr[] = {
     [N_EM]    = A_ITALIC,
     [N_PLAIN] = A_NORMAL,
     [N_BOLD]  = A_BOLD,
     [N_INS]   = A_UNDERLINE,
-    [N_DEL]   = A_REVERSE,
+    [N_DEL]   = A_INVIS,
     [N_PRE]   = A_NORMAL,
     [N_CODE]  = COLOR_PAIR(C_YELLOW),
     [N_KBD]   = A_DIM,
@@ -277,10 +279,11 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
 
       if (cmp_xml("title", cur_node->name)) {
         link->indent = 0;
+        link->attr |= node_attr[N_INS];
         // tail->prop |= P_SPLIT;
       }
       else if (cmp_xml("h1", cur_node->name)) {  /* h1 as "NAME" .SH */
-        bufputs(link->buf, "NAME:");
+        bufputs(link->buf, "NAME: ");
         link->indent = 0;
         link->prop |= P_SECTION;
         link->attr |= node_attr[N_HEAD];
@@ -296,29 +299,29 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
         link->attr |= node_attr[N_HEAD];
       }
       else if (cmp_xml("h4", cur_node->name)) {  /* h4 as Sub of .SS */
-        bufputs(link->buf, "SC: ");
+        /*bufputs(link->buf, "SC: ");*/
         link->indent = 4;
         link->prop |= P_SECTION;
-        link->attr |= node_attr[N_HEAD];
+        link->attr |= node_attr[N_HEAD] | node_attr[N_EM];
       }
       else if (cmp_xml("h5", cur_node->name)) {  /* h5 as Points in Sub */
-        bufputs(link->buf, "PT: ");
+        /*bufputs(link->buf, "PT: ");*/
         link->indent = 5;
         link->prop |= P_SECTION;
-        link->attr |= node_attr[N_HEAD];
+        link->attr |= node_attr[N_HEAD] | node_attr[N_INS];
       }
       else if (cmp_xml("h6", cur_node->name)) {  /* h6 as Sub of Points */
-        bufputs(link->buf, "PS: ");
+        /*bufputs(link->buf, "PS: ");*/
         link->indent = 6;
         link->prop |= P_SECTION;
-        link->attr |= node_attr[N_HEAD];
+        link->attr |= node_attr[N_HEAD] | node_attr[N_INS] | node_attr[N_EM];
       }
       else if (cmp_xml("ul", cur_node->name) ||
                cmp_xml("ol", cur_node->name)) {  /* unordered list */
         link->indent += 2;
       }
       else if (cmp_xml("li", cur_node->name)) {  /* list item */
-        bufputs(link->buf, "•");
+        bufputs(link->buf, "• ");
         link->prop |= P_SPLIT;
       }
       else if (cmp_xml("p", cur_node->name)) {  /* paragraph */
@@ -340,9 +343,9 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
                cmp_xml("s", cur_node->name)) {  /* strikethrough */
         link->attr |= node_attr[N_DEL];
       }
-      else if (cmp_xml("kbd", cur_node->name)) {  /* keyboard key */
-        link->attr |= node_attr[N_KBD];
-      }
+      /*else if (cmp_xml("kbd", cur_node->name)) {   keyboard key */
+      /*  link->attr |= node_attr[N_KBD];*/
+      /*}*/
       else if (cmp_xml("pre", cur_node->name)) {  /* codeblock */
         link->prop |= P_PREFIXED;
         tail->prop |= P_PREFIXED;

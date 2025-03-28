@@ -31,11 +31,9 @@ This is `also Code Block`
 
 This is <ins>underline</ins>
 
-This is <em>italic</em>
+This is *italic*
 
-This is <strong>bold</strong>
-
-This is a <kbd>key</kbd>
+This is **bold**
 
 Can you see this <del>strikethrough</del>?
 

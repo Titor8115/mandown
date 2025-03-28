@@ -174,6 +174,7 @@ rndr_strikethrough(struct buf *ob, const struct buf *text, void *opaque) {
   return 1;
 }
 
+// TODO: Temporary fix for the Bold/Strong tags swallow empty space after that tag
 static int
 rndr_double_emphasis(struct buf *ob, const struct buf *text, void *opaque) {
   if (!text || !text->size)
@@ -181,16 +182,19 @@ rndr_double_emphasis(struct buf *ob, const struct buf *text, void *opaque) {
 
   BUFPUTSL(ob, "<strong>");
   bufput(ob, text->data, text->size);
-  BUFPUTSL(ob, "</strong>");
+  // WARN: extra space before end tag as tmp solution
+  BUFPUTSL(ob, " </strong>");
   return 1;
 }
 
+// TODO: Temporary fix for the emphasis/italic tags swallow empty space after that tag
 static int
 rndr_emphasis(struct buf *ob, const struct buf *text, void *opaque) {
   if (!text || !text->size) return 0;
   BUFPUTSL(ob, "<em>");
   if (text) bufput(ob, text->data, text->size);
-  BUFPUTSL(ob, "</em>");
+  // WARN: extra space before end tag as tmp solution
+  BUFPUTSL(ob, " </em>");
   return 1;
 }
 

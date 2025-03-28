@@ -73,6 +73,7 @@ ifeq ($(UNAME_S),Linux)
 		CURSES   = ncurses
 	else
 		CURSES   = ncursesw
+		DEFINES += -DWIDE_NCURSES
 	endif
 	SOEXT    = so
 	SHLFLAGS = -shared
