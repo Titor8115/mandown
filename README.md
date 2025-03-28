@@ -74,17 +74,17 @@ Check out the new sample
 $ mdn sample.md
 ```
 
-Mouse wheel scrolling is supported! (if your terminal emulator allows)
+Mouse scrolling is supported! (if your terminal emulator allows)
 
-Scroll Up: <kbd>↑</kbd>, <kbd>k</kbd>
+Move Up: <kbd>Up</kbd>, <kbd>k</kbd>
 
-Scroll Down: <kbd>↓</kbd>, <kbd>j</kbd>
+Move Down: <kbd>Down</kbd>, <kbd>j</kbd>
 
-Page Up: <kbd>space bar</kbd>,  <kbd>pg up</kbd>, <kbd>fn + ↑</kbd>a, <kbd>b</kbd>
+Page Up: <kbd>Space</kbd>,  <kbd>PgUp</kbd>, <kbd>b</kbd>
 
-Page Down:  <kbd>back space</kbd>,  <kbd>pg down</kbd>, <kbd>fn + ↓</kbd>, <kbd>f</kbd>
+Page Down:  <kbd>Bksp</kbd>,  <kbd>PgDn</kbd>, <kbd>f</kbd>
 
-Select & Get href: <kbd>tab</kbd> or double click <kbd>mouse 1</kbd> & <kbd>enter</kbd>
+Show href in hyperlink: <kbd>Tab + Enter</kbd>, or double click <kbd>mouse 1</kbd>
 
 Exit: <kbd>q</kbd>
 
