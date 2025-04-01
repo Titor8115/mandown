@@ -20,7 +20,6 @@
 #ifndef MDN_VIEW_H
 #define MDN_VIEW_H
 
-#include "st_curses.h"
 #include "dom.h"
 
 #ifdef __cplusplus

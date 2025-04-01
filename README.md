@@ -115,13 +115,13 @@ Static and shared libraries are available. Make sure you have installed the depe
 ```shell
 # static build
 gcc -o myprog -I/usr/local/include myprog.c /usr/local/lib/mandown.a -lncurses -lxml2 -lconfig
-
-# shared build
-gcc -o myprog -I/usr/local/include myprog.c -L/usr/local/lib -lmandown -lncurses -lxm2 -lconfig
 ```
 
-## Known issues
-- Red Hat Linux (Fedora) curses library wide characters support
+```shell
+# shared build
+gcc -o myprog -I/usr/local/include myprog.c -L/usr/local/lib -lmandown -lncurses -lxml2 -lconfig
+```
+tests
 
 ## Todo
 

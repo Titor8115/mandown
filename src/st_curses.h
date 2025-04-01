@@ -19,7 +19,7 @@
 #define MDN_ST_CURSES_H
 
 /* Makefile will define WIDE_NCURSES during compile if libncursesw is detected */
-#ifdef WIDE_NCURSES
+#ifdef WIDE_CURSES
 #include <ncursesw/ncurses.h>
 #else
 #include <ncurses.h>
@@ -37,9 +37,9 @@ extern "C" {
 /*#define MOUSE_WHEEL_UP   0x00080000*/
 /*#define MOUSE_WHEEL_DOWN 0x08000000*/
 
-#ifndef A_ITALIC
-#define A_ITALIC NCURSES_BITS(1U, 23)
-#endif
+/*#ifndef A_ITALIC*/
+/*#define A_ITALIC NCURSES_BITS(1U, 23)*/
+/*#endif*/
 
 #ifdef __cplusplus
 }

@@ -179,6 +179,7 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
         wattron(dest->win, ob->attr);
         if ((ob->prop & P_PREFIXED))
           toc = "\n";
+
         if (ob->prop & P_HYPERLINK) {
           href = href_table->item[stack_pos];
           stack_pos++;
@@ -210,13 +211,15 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
     while (out != NULL) {
       len = strlen(out);
 
-      if (cur_x == 0) move_cursor(dest, cur_y, cur_x = ob->indent);
+      if (cur_x == 0)
+        move_cursor(dest, cur_y, cur_x = ob->indent);
 
       if ((cur_x > ob->indent) && (cur_x + len >= dest->max_x)) {
         cur_x = ob->indent;
         cur_y++;
         move_cursor(dest, cur_y + (len + ob->indent) / dest->max_x, cur_x);
       }
+
       waddnstr(dest->win, out, len);
       getyx(dest->win, cur_y, cur_x);
       if (href != NULL) {
@@ -245,7 +248,7 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
   free(tmp);
 
   if (dest->max_y != cur_y) {
-    dest->max_y = cur_y + 1;
+    dest->max_y = cur_y + 5;
     wresize(dest->win, dest->max_y, dest->max_x);
   }
 }
@@ -438,7 +441,7 @@ int view(const struct buf *ob, int href_count)
   LIBXML_TEST_VERSION;
   /* Grow DOM tree; */
   doc = htmlReadMemory((char *)(ob->data), (int)(ob->size),
-                       "file", NULL, HTML_PARSE_NOBLANKS | HTML_PARSE_NOWARNING | HTML_PARSE_RECOVER | HTML_PARSE_NOERROR);
+                       "file", "UTF-8", HTML_PARSE_NOBLANKS | HTML_PARSE_NOWARNING | HTML_PARSE_RECOVER | HTML_PARSE_NOERROR);
   if (!doc) {
     sderror("Cannot make sense of given file in HTML/xHTML format");
     return EXIT_FAILURE;

@@ -35,7 +35,7 @@ UNAME_S := $(shell uname -s 2>/dev/null || echo not)
 
 PREFIX ?= /usr/local
 DESTDIR =
-CONFIGDIR = ~/.config/mdn
+CONFIGDIR = $(if $(XDG_CONFIG_HOME),$(XDG_CONFIG_HOME)/mdn,$(HOME)/.config/mdn)
 
 # autoconf compatible variables
 prefix      = $(PREFIX)
@@ -52,7 +52,7 @@ MKDIR_P    = mkdir -p
 RM_RF      = rm -rf
 INSTALL    = install
 # use make PKG_CONFIG=pkg-config to use pkg-config
-#PKG_CONFIG = pkg-config
+PKG_CONFIG = pkg-config
 
 # flags
 OPT       = -O3
@@ -68,34 +68,33 @@ LIBS      = $(CURSES_LIBS) $(XML2_LIBS) $(CONFIG_LIBS)
 
 # OS-specific additions
 ifeq ($(UNAME_S),Linux)
-	DEFINES += -DLINUX
 	ifeq ($(shell ldconfig -p | grep libncursesw),)
-		CURSES   = ncurses
+		CURSES_PKG   = ncurses
 	else
-		CURSES   = ncursesw
-		DEFINES += -DWIDE_NCURSES
+		CURSES_PKG   = ncursesw
+		DEFINES 	+= -DWIDE_NCURSES
 	endif
 	SOEXT    = so
 	SHLFLAGS = -shared
 else ifeq ($(UNAME_S),Darwin)
-	DEFINES += -DMACOS
-	CURSES   = ncurses
-	SOEXT    = dylib
-	SHLFLAGS = -dynamiclib
+	CURSES_PKG   = ncurses
+	SOEXT    	 = dylib
+	SHLFLAGS 	 = -dynamiclib
 else
-CURSES   = ncurses
+CURSES_PKG   = ncurses
 endif
 
 # libraries
-CURSES_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(CURSES)))
-CURSES_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(CURSES)),-l$(CURSES))
+CURSES_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(CURSES_PKG)))
+CURSES_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(CURSES_PKG)),-l$(CURSES_PKG))
 
-XML2           = libxml-2.0
-XML2_CFLAGS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(XML2)),-I/usr/include/libxml2)
-XML2_LIBS     := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(XML2)),-lxml2)
+XML2_PKG       = libxml-2.0
+XML2_CFLAGS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(XML2_PKG)),-I/usr/include/libxml2)
+XML2_LIBS     := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(XML2_PKG)),-lxml2)
 
-CONFIG_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags libconfig))
-CONFIG_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs libconfig),-lconfig)
+CONFIG_PKG	   = libconfig
+CONFIG_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(CONFIG_PKG)))
+CONFIG_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(CONFIG_PKG)),-lconfig)
 
 # sources
 LIB_SOURCES := $(sort $(wildcard src/*.c blender/*.c parser/*.c))
