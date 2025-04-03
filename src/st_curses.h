@@ -37,9 +37,9 @@ extern "C" {
 /*#define MOUSE_WHEEL_UP   0x00080000*/
 /*#define MOUSE_WHEEL_DOWN 0x08000000*/
 
-/*#ifndef A_ITALIC*/
-/*#define A_ITALIC NCURSES_BITS(1U, 23)*/
-/*#endif*/
+#ifndef A_ITALIC
+#define A_ITALIC NCURSES_BITS(1U, 23)
+#endif
 
 #ifdef __cplusplus
 }
