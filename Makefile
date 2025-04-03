@@ -34,7 +34,7 @@ O = build
 UNAME_S := $(shell uname -s 2>/dev/null || echo not)
 
 PREFIX ?= /usr/local
-DESTDIR =
+DESTDIR ?=
 CONFIGDIR = $(if $(XDG_CONFIG_HOME),$(XDG_CONFIG_HOME)/mdn,$(HOME)/.config/mdn)
 
 # autoconf compatible variables
