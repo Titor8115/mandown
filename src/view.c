@@ -528,7 +528,7 @@ int view(const struct buf *ob, int href_count)
               cur_y = event.y;
               cur_x = event.x;
               move(cur_y, cur_x);
-              cmd = CMD_COMFIRM;
+              cmd = CMD_CONFIRM;
             }
           }
         }
@@ -546,7 +546,7 @@ int view(const struct buf *ob, int href_count)
           }
         break;
       }
-      case CMD_COMFIRM: {
+      case CMD_CONFIRM: {
         werase(probe->win);
         box(probe->win, ' ', 0);
         wattron(probe->win, A_REVERSE);
@@ -616,7 +616,7 @@ int view(const struct buf *ob, int href_count)
     }
 
     if (cmd != CMD_ERR) {
-      if (cmd == CMD_COMFIRM) {
+      if (cmd == CMD_CONFIRM) {
         pnoutrefresh(page->win, page->cur_y, 0, 0, 0, height - probe->max_y, width);
 
         wnoutrefresh(probe->win);
