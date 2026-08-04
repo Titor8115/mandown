@@ -34,7 +34,7 @@ mdn_command less_cmd_scheme(int key)
       return CMD_SELECT_HREF;
     }
     case ENTER: {
-      return CMD_COMFIRM;
+      return CMD_CONFIRM;
     }
     case 'e':
     case 'j':
@@ -89,7 +89,7 @@ mdn_command mdn_cmd_scheme(int key)
       return CMD_SELECT_HREF;
     }
     case ENTER: {
-      return CMD_COMFIRM;
+      return CMD_CONFIRM;
     }
     case 's':
     case KEY_DOWN: {
@@ -160,7 +160,7 @@ mdn_command vim_cmd_scheme(int key)
       return CMD_SELECT_HREF;
     }
     case ENTER: {
-      return CMD_COMFIRM;
+      return CMD_CONFIRM;
     }
     case KEY_RESIZE: {
       return CMD_RESIZE_EVENT;
