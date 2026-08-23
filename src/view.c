@@ -180,7 +180,7 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
         if ((ob->prop & P_PREFIXED))
           toc = "\n";
 
-        if (ob->prop & P_HYPERLINK) {
+        if ((ob->prop & P_HYPERLINK) && stack_pos < href_table->size) {
           href = href_table->item[stack_pos];
           stack_pos++;
           href->beg_y = cur_y;
