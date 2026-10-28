@@ -26,11 +26,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "blender.h"
-#include "buffer.h"
 #include "config.h"
-#include "markdown.h"
-#include "view.h"
 
 void usage()
 {

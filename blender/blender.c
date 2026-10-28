@@ -114,6 +114,8 @@ rndr_autolink(struct buf *ob, const struct buf *link, enum mkd_autolink type, vo
 
 static void
 rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, void *opaque) {
+  // NOTE: if ``` is not followed by any language assignment, the blender will treat it
+  // as <pre> instead of <pre><code>.
   if (lang && lang->size) {
     size_t i, cls;
     BUFPUTSL(ob, "<pre><code class=\"");
@@ -143,7 +145,6 @@ rndr_blockcode(struct buf *ob, const struct buf *text, const struct buf *lang, v
     escape_blender(ob, text->data, text->size);
 
   BUFPUTSL(ob, "</code></pre>\n");
-  
 }  /* blocks counted */
 
 static void
@@ -174,7 +175,7 @@ rndr_strikethrough(struct buf *ob, const struct buf *text, void *opaque) {
   return 1;
 }
 
-// TODO: Temporary fix for the Bold/Strong tags swallow empty space after that tag
+// TODO: [missing whitespace] Temporary fix for the Bold/Strong tags swallow empty space after that tag
 static int
 rndr_double_emphasis(struct buf *ob, const struct buf *text, void *opaque) {
   if (!text || !text->size)
@@ -182,18 +183,18 @@ rndr_double_emphasis(struct buf *ob, const struct buf *text, void *opaque) {
 
   BUFPUTSL(ob, "<strong>");
   bufput(ob, text->data, text->size);
-  // WARN: extra space before end tag as tmp solution
+  // WARN: [missing whitespace] extra space before end tag as tmp solution
   BUFPUTSL(ob, " </strong>");
   return 1;
 }
 
-// TODO: Temporary fix for the emphasis/italic tags swallow empty space after that tag
+// TODO: [missing whitespace] Temporary fix for the emphasis/italic tags swallow empty space after that tag
 static int
 rndr_emphasis(struct buf *ob, const struct buf *text, void *opaque) {
   if (!text || !text->size) return 0;
   BUFPUTSL(ob, "<em>");
   if (text) bufput(ob, text->data, text->size);
-  // WARN: extra space before end tag as tmp solution
+  // WARN: [missing whitespace] extra space before end tag as tmp solution
   BUFPUTSL(ob, " </em>");
   return 1;
 }

@@ -19,7 +19,7 @@
 #define MDN_ST_CURSES_H
 
 /* Makefile will define WIDE_NCURSES during compile if libncursesw is detected */
-#ifdef WIDE_CURSES
+#ifdef WIDE_NCURSES
 #include <ncursesw/ncurses.h>
 #else
 #include <ncurses.h>

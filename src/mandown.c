@@ -76,7 +76,6 @@ int render_buf(struct buf *ib, const char *ext, const char *title, const char *o
   else if (!isatty(STDOUT_FILENO)) {
     fwrite((void *)ob->data, ob->size, 1, stdout);
   }
-
   else {  /* output to mandown pager */
     ret = view(ob, href);
   }
@@ -95,6 +94,7 @@ int render_file(FILE *fp, const char *ext, const char *title, const char *out)
 
   if (ib == NULL)
     return EXIT_FAILURE;
+
   bufgrow(ib, READ_UNIT);
   while ((ret = fread(ib->data + ib->size, 1, ib->asize - ib->size, fp)) > 0) {
     ib->size += ret;

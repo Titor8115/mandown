@@ -22,27 +22,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+SHELL = /bin/sh
+
 MAKEFLAGS += -rR
 
-TARGET = mdn
+TARGET   = mdn
 BASENAME = mandown
-LIB_A = lib$(BASENAME).a
-LIB_SO = lib$(BASENAME).$(SOEXT)
+LIB_A    = lib$(BASENAME).a
+LIB_SO   = lib$(BASENAME).$(SOEXT)
 
 O = build
 
 UNAME_S := $(shell uname -s 2>/dev/null || echo not)
 
-PREFIX ?= /usr/local
-DESTDIR ?=
-CONFIGDIR = $(if $(XDG_CONFIG_HOME),$(XDG_CONFIG_HOME)/mdn,$(HOME)/.config/mdn)
+PREFIX    ?= /usr/local
+DESTDIR   ?=
+CONFIGDIR  = $(if $(XDG_CONFIG_HOME),$(XDG_CONFIG_HOME)/mdn,$(HOME)/.config/mdn)
 
 # autoconf compatible variables
-prefix      = $(PREFIX)
-exec_prefix = $(prefix)
-bindir      = $(exec_prefix)/bin
-incdir      = $(prefix)/include
-libdir      = $(exec_prefix)/lib
+prefix      ?= $(PREFIX)
+exec_prefix  = $(prefix)
+bindir       = $(exec_prefix)/bin
+incdir       = $(prefix)/include
+libdir       = $(exec_prefix)/lib
 
 # tools
 CC         = gcc
@@ -57,7 +59,12 @@ PKG_CONFIG = pkg-config
 # flags
 OPT       = -O3
 DBGSYMS   = -g
-WARNINGS  = -Wall -Wextra -Wpointer-arith -Wundef -Wno-unused-parameter
+WARNINGS  = -Wall -Wextra -Wformat=2 \
+	    -Wpointer-arith -Wundef -Wno-unused-parameter \
+	    -Wredundant-decls
+ifeq ($(CC),gcc)
+	WARNINGS += -Wlogical-op
+endif
 DEPENDS   = -MMD -MP
 INCLUDES  = -Iparser -Iblender -Isrc
 DEFINES   =
@@ -69,17 +76,17 @@ LIBS      = $(CURSES_LIBS) $(XML2_LIBS) $(CONFIG_LIBS)
 # OS-specific additions
 ifeq ($(UNAME_S),Linux)
 	ifeq ($(shell ldconfig -p | grep libncursesw),)
-		CURSES_PKG   = ncurses
+		CURSES_PKG = ncurses
 	else
-		CURSES_PKG   = ncursesw
-		DEFINES 	+= -DWIDE_NCURSES
+		CURSES_PKG  = ncursesw
+		DEFINES    += -DWIDE_NCURSES
 	endif
 	SOEXT    = so
 	SHLFLAGS = -shared
 else ifeq ($(UNAME_S),Darwin)
-	CURSES_PKG   = ncurses
-	SOEXT    	 = dylib
-	SHLFLAGS 	 = -dynamiclib
+	CURSES_PKG = ncurses
+	SOEXT      = dylib
+	SHLFLAGS   = -dynamiclib
 else
 CURSES_PKG   = ncurses
 endif
@@ -92,7 +99,7 @@ XML2_PKG       = libxml-2.0
 XML2_CFLAGS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(XML2_PKG)),-I/usr/include/libxml2)
 XML2_LIBS     := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(XML2_PKG)),-lxml2)
 
-CONFIG_PKG	   = libconfig
+CONFIG_PKG     = libconfig
 CONFIG_CFLAGS := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --cflags $(CONFIG_PKG)))
 CONFIG_LIBS   := $(if $(PKG_CONFIG),$(shell $(PKG_CONFIG) --libs $(CONFIG_PKG)),-lconfig)
 

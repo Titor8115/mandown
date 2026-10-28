@@ -175,6 +175,10 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
 
   for (ob = ib; ob != NULL; ob = ob->next) {
     if (ob->prop & P_CONTROL) {
+      /* Toggle attribute on/off if P_BEG_A is given 
+       * Also change string token delimitor to only newline if P_PREFIXED, and
+       * restore whitespace if prefixed section end
+       */
       if (ob->prop & P_BEG_A) {
         wattron(dest->win, ob->attr);
         if ((ob->prop & P_PREFIXED))
@@ -206,7 +210,9 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
       memcpy(tmp, ob->buf->data, ob->buf->size + 1);
     }
 
+    /* The cursor engine that decides drawing based on given property and attribute */
     position = 0;
+    // TODO: [missing whitespace] strtok probably caused the missing whitespace after Bold and Italic, need test and fix
     out      = strtok(tmp, toc);
     while (out != NULL) {
       len = strlen(out);
@@ -228,6 +234,7 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
         href = NULL;
       }
       // j += len;
+      /* Decide whether applying word-wrap based on the strtok token */
       position += len;
       if (position < ob->buf->size) {
         if (toc[0] == '\n') {
@@ -324,7 +331,11 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
         link->indent += 2;
       }
       else if (cmp_xml("li", cur_node->name)) {  /* list item */
+        #ifdef WIDE_NCURSES
         bufputs(link->buf, "• ");
+        #else
+        bufputs(link->buf, "- ");
+        #endif /* ifdef WIDE_NCURSES */
         link->prop |= P_SPLIT;
       }
       else if (cmp_xml("p", cur_node->name)) {  /* paragraph */
@@ -344,11 +355,21 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
       }
       else if (cmp_xml("del", cur_node->name) ||
                cmp_xml("s", cur_node->name)) {  /* strikethrough */
+        // TODO: [feature] add ANSI or tput strikethrough if ncurses can leave the render to terminal
         link->attr |= node_attr[N_DEL];
       }
       /*else if (cmp_xml("kbd", cur_node->name)) {   keyboard key */
       /*  link->attr |= node_attr[N_KBD];*/
       /*}*/
+      else if (cmp_xml("blockquote", cur_node->name)) { /* blockquote */
+        #ifdef WIDE_NCURSES
+        bufputs(link->buf, "│ ");
+        #else
+        bufputs(link->buf, "| ");
+        #endif /* ifdef WIDE_NCURSES */
+        link->attr |= N_KBD;
+        link->prop |= P_SPLIT;
+      }
       else if (cmp_xml("pre", cur_node->name)) {  /* codeblock */
         link->prop |= P_PREFIXED;
         tail->prop |= P_PREFIXED;
