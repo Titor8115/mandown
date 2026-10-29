@@ -6,6 +6,7 @@ build.d
 mdn
 .cache/
 .clang-format
+.gdb_history
 compile_commands.json
 libmandown.a
 libmandown.so

@@ -1,18 +1,18 @@
 /**
  * Copyright (C) 2019 Tianze Han
- * 
+ *
  * This file is part of Mandown.
- * 
+ *
  * Mandown is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Mandown is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Mandown.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -38,12 +38,7 @@ enum color_set {
   C_MAX,
 };
 
-enum frame_type {
-  FRAME_WIN = 0,
-  FRAME_SWIN,
-  FRAME_PAD,
-  FRAME_SPAD
-};
+enum frame_type { FRAME_WIN = 0, FRAME_SWIN, FRAME_PAD, FRAME_SPAD };
 
 enum node_t {
   N_PLAIN = 0,

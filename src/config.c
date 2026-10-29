@@ -17,44 +17,45 @@
  * along with Mandown.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
-
-#include "config.h"
+#include <unistd.h>
 
 static struct mdn_cfg rc_rule = {
-    .use_mouse = CONFIG_TRUE,
-    .indent = 7,
+    .use_mouse      = CONFIG_TRUE,
+    .indent         = 7,
     .control_scheme = "less",
 };
 
-void sd_info(char *output) {
-  if (!isatty(STDOUT_FILENO))
-    return;
+void sd_info(char *output)
+{
+  if (!isatty(STDOUT_FILENO)) return;
 
   fprintf(stdout, "%sNote: %s%s\n", "\033[36m", "\033[0m", output);
 }
 
-void sd_error(char *output) {
-  if (!isatty(STDERR_FILENO))
-    return;
+void sd_error(char *output)
+{
+  if (!isatty(STDERR_FILENO)) return;
 
   fprintf(stderr, "%sError: %s%s\n", "\033[31m", "\033[0m", output);
 }
 
-void sd_warn(char *output) {
-  if (!isatty(STDERR_FILENO))
-    return;
+void sd_warn(char *output)
+{
+  if (!isatty(STDERR_FILENO)) return;
 
   fprintf(stderr, "%sWarn: %s%s\n", "\033[33m", "\033[0m", output);
 }
 
-struct mdn_cfg *get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp) {
-  config_t update;
+struct mdn_cfg *get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp)
+{
+  config_t          update;
   config_setting_t *setting;
 
   config_init(&update);
@@ -72,8 +73,10 @@ struct mdn_cfg *get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp) {
               "use_mouse = %s;\n\n",
               (rc_rule.use_mouse ? "true" : "false"));
     }
-  } else
+  }
+  else {
     rc_rule.use_mouse = config_setting_get_bool(setting);
+  }
 
   setting = config_lookup(user, "indent");
   if (!config_lookup_int(user, "indent", &(rc_rule.indent))) {
@@ -83,8 +86,10 @@ struct mdn_cfg *get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp) {
               "indent = %d;\n\n",
               rc_rule.indent);
     }
-  } else
+  }
+  else {
     rc_rule.indent = config_setting_get_int(setting);
+  }
 
   setting = config_lookup(user, "control_scheme");
   if (!setting) {
@@ -94,22 +99,24 @@ struct mdn_cfg *get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp) {
               "control_scheme = \"%s\";\n\n",
               rc_rule.control_scheme);
     }
-  } else {
+  }
+  else {
     rc_rule.control_scheme[0] = config_setting_get_string(setting)[0];
   }
 
   return config;
 }
 
-struct mdn_cfg *configure() {
+struct mdn_cfg *configure()
+{
   config_t cfg;
-  char *env;
-  char *rc_path;
-  FILE *fp_rc;
+  char    *env;
+  char    *rc_path;
+  FILE    *fp_rc;
 
   /* Setup default path for rc file based on user */
 #ifdef DEBUG
-  env = getenv("PWD");
+  env     = getenv("PWD");
   rc_path = malloc(strlen(env) + strlen("/test/mdnrc") + 1);
   strcpy(rc_path, env);
   strcat(rc_path, "/test");
@@ -119,8 +126,9 @@ struct mdn_cfg *configure() {
     rc_path = malloc(strlen(env) + strlen("/mdn/mdnrc") + 1);
     strcpy(rc_path, env);
     strcat(rc_path, "/mdn");
-  } else {
-    env = getenv("HOME");
+  }
+  else {
+    env     = getenv("HOME");
     rc_path = malloc(strlen(env) + strlen("/.config/mdn/mdnrc") + 1);
     strcpy(rc_path, env);
     strcat(rc_path, "/.config/mdn");
@@ -137,13 +145,14 @@ struct mdn_cfg *configure() {
     fp_rc = fopen(rc_path, "a+");
     if (!fp_rc) {
       sdwarn("Failed to access mdnrc, switching to builtin setting");
-    } else {
+    }
+    else {
       config_read(&cfg, fp_rc);
       get_user_rc(&cfg, &rc_rule, fp_rc);
       fclose(fp_rc);
     }
   }
-  
+
   /* Clean up */
   config_destroy(&cfg);
   free(rc_path);
