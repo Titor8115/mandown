@@ -21,7 +21,8 @@
 
 #include "st_curses.h"
 
-mdn_command less_cmd_scheme(int key)
+mdn_command
+less_cmd_scheme(int key)
 {
   switch (key) {
     case 'i': {
@@ -76,7 +77,8 @@ mdn_command less_cmd_scheme(int key)
   }
 }
 
-mdn_command mdn_cmd_scheme(int key)
+mdn_command
+mdn_cmd_scheme(int key)
 {
   switch (key) {
     case 'i': {
@@ -128,7 +130,8 @@ mdn_command mdn_cmd_scheme(int key)
   }
 }
 
-mdn_command vim_cmd_scheme(int key)
+mdn_command
+vim_cmd_scheme(int key)
 {
   switch (key) {
     case 'i': {

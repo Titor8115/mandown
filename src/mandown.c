@@ -30,8 +30,8 @@
 #include "markdown.h"
 #include "view.h"
 
-int render_buf(struct buf *ib, const char *ext, const char *title,
-               const char *out)
+int
+render_buf(struct buf *ib, const char *ext, const char *title, const char *out)
 {
   FILE                    *fp_out;
   struct buf              *ob;
@@ -89,7 +89,8 @@ clean_up:
   return ret;
 }
 
-int render_file(FILE *fp, const char *ext, const char *title, const char *out)
+int
+render_file(FILE *fp, const char *ext, const char *title, const char *out)
 {
   struct buf *ib = bufnew(READ_UNIT);
   int         ret;
@@ -104,8 +105,8 @@ int render_file(FILE *fp, const char *ext, const char *title, const char *out)
   return render_buf(ib, ext, title, out);
 }
 
-int render_str(const char *str, const char *ext, const char *title,
-               const char *out)
+int
+render_str(const char *str, const char *ext, const char *title, const char *out)
 {
   struct buf *ib = bufnew(READ_UNIT);
 

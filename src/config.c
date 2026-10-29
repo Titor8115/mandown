@@ -32,28 +32,32 @@ static struct mdn_cfg rc_rule = {
     .control_scheme = "less",
 };
 
-void sd_info(char *output)
+void
+sd_info(char *output)
 {
   if (!isatty(STDOUT_FILENO)) return;
 
   fprintf(stdout, "%sNote: %s%s\n", "\033[36m", "\033[0m", output);
 }
 
-void sd_error(char *output)
+void
+sd_error(char *output)
 {
   if (!isatty(STDERR_FILENO)) return;
 
   fprintf(stderr, "%sError: %s%s\n", "\033[31m", "\033[0m", output);
 }
 
-void sd_warn(char *output)
+void
+sd_warn(char *output)
 {
   if (!isatty(STDERR_FILENO)) return;
 
   fprintf(stderr, "%sWarn: %s%s\n", "\033[33m", "\033[0m", output);
 }
 
-struct mdn_cfg *get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp)
+struct mdn_cfg *
+get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp)
 {
   config_t          update;
   config_setting_t *setting;
@@ -107,7 +111,8 @@ struct mdn_cfg *get_user_rc(config_t *user, struct mdn_cfg *config, FILE *fp)
   return config;
 }
 
-struct mdn_cfg *configure()
+struct mdn_cfg *
+configure()
 {
   config_t cfg;
   char    *env;

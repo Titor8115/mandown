@@ -59,18 +59,24 @@ struct mdn_cfg {
   int  indent;
 };
 
-void sd_info(char *);
-void sd_error(char *);
-void sd_warn(char *);
+void
+sd_info(char *);
+void
+sd_error(char *);
+void
+sd_warn(char *);
 
 #define sdinfo(string)  sd_info((char *)string)
 #define sderror(string) sd_error((char *)string)
 #define sdwarn(string)  sd_warn((char *)string)
 
-struct mdn_cfg *default_rc_new();
-void            default_rc_free(struct mdn_cfg *);
+struct mdn_cfg *
+default_rc_new();
+void
+default_rc_free(struct mdn_cfg *);
 
-struct mdn_cfg *configure();
+struct mdn_cfg *
+configure();
 
 #ifdef __cplusplus
 }

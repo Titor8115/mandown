@@ -73,7 +73,8 @@ static const attr_t node_attr[] = {
     [N_HREF]  = A_UNDERLINE | COLOR_PAIR(C_BLUE),
 };
 
-static void create_color_pairs()
+static void
+create_color_pairs()
 {
   if (has_colors()) { /* Set color if terminal support */
     start_color();
@@ -87,19 +88,22 @@ static void create_color_pairs()
   }
 }
 
-static inline void scroll_up(struct frame *page)
+static inline void
+scroll_up(struct frame *page)
 {
   if (page->cur_y > 0) page->cur_y--;
 }
 
-static inline void scroll_down(struct frame *page)
+static inline void
+scroll_down(struct frame *page)
 {
   int max_y = getmaxy(stdscr) - 1;
   if (page->cur_y + max_y < page->max_y) page->cur_y++;
 }
 
-struct frame *frame_new(int type, WINDOW *parent, int max_y, int max_x,
-                        int begin_y, int begin_x)
+struct frame *
+frame_new(int type, WINDOW *parent, int max_y, int max_x, int begin_y,
+          int begin_x)
 {
   struct frame *ret;
   ret = malloc(sizeof(struct frame));
@@ -132,14 +136,16 @@ struct frame *frame_new(int type, WINDOW *parent, int max_y, int max_x,
   return ret;
 }
 
-void frame_free(struct frame *part)
+void
+frame_free(struct frame *part)
 {
   if (!part) return;
   delwin(part->win);
   free(part);
 }
 
-static void move_cursor(struct frame *pad, int cur_y, int cur_x)
+static void
+move_cursor(struct frame *pad, int cur_y, int cur_x)
 {
   if (!pad->win) return;
 
@@ -156,8 +162,8 @@ static void move_cursor(struct frame *pad, int cur_y, int cur_x)
   }
 }
 
-static void render_page(struct frame *dest, struct dom_link *ib,
-                        struct stack *href_table)
+static void
+render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
 {
   struct dom_link       *ob;
   struct dom_href_stack *href = NULL;
@@ -256,8 +262,8 @@ static void render_page(struct frame *dest, struct dom_link *ib,
   }
 }
 
-struct dom_link *content_setup(xmlNode *node, int indent,
-                               struct stack *href_table)
+struct dom_link *
+content_setup(xmlNode *node, int indent, struct stack *href_table)
 {
   struct dom_href_stack *href;
   struct dom_link       *link;
@@ -432,7 +438,8 @@ struct dom_link *content_setup(xmlNode *node, int indent,
   return head;
 }
 
-int view(const struct buf *ob, int href_count)
+int
+view(const struct buf *ob, int href_count)
 {
   struct frame          *page;   /* content container */
   struct frame          *status; /* status line container */

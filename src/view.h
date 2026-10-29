@@ -65,7 +65,8 @@ struct frame {
   int     cur_x;
 };
 
-int view(const struct buf *, int);
+int
+view(const struct buf *, int);
 
 #ifdef __cplusplus
 }

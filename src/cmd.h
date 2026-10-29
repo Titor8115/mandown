@@ -43,9 +43,12 @@ typedef enum {
 
 } mdn_command;
 
-mdn_command less_cmd_scheme(int);
-mdn_command mdn_cmd_scheme(int);
-mdn_command vim_cmd_scheme(int);
+mdn_command
+less_cmd_scheme(int);
+mdn_command
+mdn_cmd_scheme(int);
+mdn_command
+vim_cmd_scheme(int);
 
 #ifdef __cplusplus
 }

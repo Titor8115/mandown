@@ -59,34 +59,46 @@ struct dom_href_stack {
   int         end_x;
 };
 
-struct dom_link *dom_link_new(struct buf *);
+struct dom_link *
+dom_link_new(struct buf *);
 
-void dom_link_append(struct dom_link **, struct dom_link *);
+void
+dom_link_append(struct dom_link **, struct dom_link *);
 
-void dom_link_free(struct dom_link *);
+void
+dom_link_free(struct dom_link *);
 
-void dom_link_reset(struct dom_link *);
+void
+dom_link_reset(struct dom_link *);
 
-struct dom_href_stack *dom_href_new(struct buf *);
+struct dom_href_stack *
+dom_href_new(struct buf *);
 
 // void dom_href_makepad(struct dom_href_stack *, int, int)
 
-void dom_href_free(struct dom_href_stack *);
+void
+dom_href_free(struct dom_href_stack *);
 
-int dom_stack_new(struct stack *, size_t);
+int
+dom_stack_new(struct stack *, size_t);
 
-int dom_stack_push(struct stack *, struct dom_href_stack *);
+int
+dom_stack_push(struct stack *, struct dom_href_stack *);
 
-struct dom_href_stack *dom_stack_pop(struct stack *);
+struct dom_href_stack *
+dom_stack_pop(struct stack *);
 
-struct dom_href_stack *dom_stack_top(struct stack *);
+struct dom_href_stack *
+dom_stack_top(struct stack *);
 
-struct dom_href_stack *dom_stack_bot(struct stack *);
+struct dom_href_stack *
+dom_stack_bot(struct stack *);
 
-struct dom_href_stack *dom_stack_find(struct stack *, size_t, int, int, int,
-                                      int);
+struct dom_href_stack *
+dom_stack_find(struct stack *, size_t, int, int, int, int);
 
-void dom_stack_free(struct stack *);
+void
+dom_stack_free(struct stack *);
 
 #ifdef __cplusplus
 }

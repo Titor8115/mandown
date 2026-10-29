@@ -19,7 +19,8 @@
 
 #include "dom.h"
 
-struct dom_link *dom_link_new(struct buf *buf)
+struct dom_link *
+dom_link_new(struct buf *buf)
 {
   struct dom_link *ret;
   ret = malloc(sizeof(struct dom_link));
@@ -34,7 +35,8 @@ struct dom_link *dom_link_new(struct buf *buf)
   return ret;
 }
 
-void dom_link_append(struct dom_link **head, struct dom_link *link)
+void
+dom_link_append(struct dom_link **head, struct dom_link *link)
 {
   struct dom_link *p = *head;
   if (link == NULL) return;
@@ -48,7 +50,8 @@ void dom_link_append(struct dom_link **head, struct dom_link *link)
   p->next = link;
 }
 
-void dom_link_free(struct dom_link *head)
+void
+dom_link_free(struct dom_link *head)
 {
   struct dom_link *link;
 
@@ -60,7 +63,8 @@ void dom_link_free(struct dom_link *head)
   }
 }
 
-void dom_link_reset(struct dom_link *link)
+void
+dom_link_reset(struct dom_link *link)
 {
   if (!link) return;
   bufrelease(link->buf);
@@ -72,7 +76,8 @@ void dom_link_reset(struct dom_link *link)
   link->prop   = 0;
 }
 
-struct dom_href_stack *dom_href_new(struct buf *buf)
+struct dom_href_stack *
+dom_href_new(struct buf *buf)
 {
   struct dom_href_stack *ret;
   ret = malloc(sizeof(struct dom_href_stack));
@@ -86,7 +91,8 @@ struct dom_href_stack *dom_href_new(struct buf *buf)
   return ret;
 }
 
-void dom_href_free(struct dom_href_stack *href)
+void
+dom_href_free(struct dom_href_stack *href)
 {
   if (!href) return;
 
@@ -94,26 +100,41 @@ void dom_href_free(struct dom_href_stack *href)
   free(href);
 }
 
-int dom_stack_new(struct stack *st, size_t size)
+int
+dom_stack_new(struct stack *st, size_t size)
 {
   return stack_init(st, size);
 }
 
-int dom_stack_push(struct stack *st, struct dom_href_stack *item)
+int
+dom_stack_push(struct stack *st, struct dom_href_stack *item)
 {
   if (!st || !item) return 0;
 
   return stack_push(st, (void *)item);
 }
 
-struct dom_href_stack *dom_stack_pop(struct stack *st) { return stack_pop(st); }
+struct dom_href_stack *
+dom_stack_pop(struct stack *st)
+{
+  return stack_pop(st);
+}
 
-struct dom_href_stack *dom_stack_top(struct stack *st) { return stack_top(st); }
+struct dom_href_stack *
+dom_stack_top(struct stack *st)
+{
+  return stack_top(st);
+}
 
-struct dom_href_stack *dom_stack_bot(struct stack *st) { return stack_bot(st); }
+struct dom_href_stack *
+dom_stack_bot(struct stack *st)
+{
+  return stack_bot(st);
+}
 
-struct dom_href_stack *dom_stack_find(struct stack *st, size_t start,
-                                      int mincol, int maxcol, int y, int x)
+struct dom_href_stack *
+dom_stack_find(struct stack *st, size_t start, int mincol, int maxcol, int y,
+               int x)
 {
   size_t                 i;
   struct dom_href_stack *tmp;
@@ -149,7 +170,8 @@ struct dom_href_stack *dom_stack_find(struct stack *st, size_t start,
   }
 }
 
-void dom_stack_free(struct stack *st)
+void
+dom_stack_free(struct stack *st)
 {
   if (!st) return;
 
