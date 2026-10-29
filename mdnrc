@@ -1,0 +1,64 @@
+# If you want Terminal Emulator handle mouse event
+# turn off "use_mouse"
+use_mouse = true;
+
+# Indent controls where manual's content start for each line
+indent = 7;
+
+# Supported Keybinding: "mdn", "vim", "less"
+control_scheme = "less";
+
+# Heading style (h1 - h6). "indent" accepts a single value for
+# every level or a list of six values, one per level starting at h1
+heading = {
+  indent = (1, 0, 3, 4, 5, 6);
+  # Colors: default, black, red, green, yellow, blue, magenta,
+  # cyan, white
+  color = "default";
+  background = "default";
+  bold = true;
+  italic = false;
+  underline = false;
+  dim = false;
+};
+
+# Inline code and code block style
+code = {
+  # Extra indent applied to code blocks
+  indent = 2;
+  # Colors: default, black, red, green, yellow, blue, magenta,
+  # cyan, white
+  color = "yellow";
+  background = "default";
+  bold = false;
+  italic = false;
+  underline = false;
+  dim = false;
+};
+
+# Hyperlink style
+url = {
+  # Colors: default, black, red, green, yellow, blue, magenta,
+  # cyan, white
+  color = "blue";
+  background = "default";
+  bold = false;
+  italic = false;
+  underline = true;
+  dim = false;
+};
+
+# Blockquote style
+quote = {
+  # Character printed in front of quoted content
+  prefix = "│";
+  indent = 0;
+  # Colors: default, black, red, green, yellow, blue, magenta,
+  # cyan, white
+  color = "default";
+  background = "default";
+  bold = false;
+  italic = false;
+  underline = false;
+  dim = true;
+};

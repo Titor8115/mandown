@@ -6,13 +6,23 @@ A man-page inspired Markdown pager written in C.
 
 ## What is it
 
-Need to lookup things from README? Or from manual page? Or perhaps just want to install something cool...
+Need to lookup things from README?
+Or from manual page?
+Or perhaps just want to install something cool...
 
 ## Update
 
-- User Customization
-  - Added control schemes: mdn, vim, less(default since mdn isn't complete)
-  - Config file location: `~/.config/mdn/mdnrc`
+- More text format configs
+  - supported blocks: heading, code, url, quote block,
+  - configurable
+    - indent
+    - color
+    - background
+    - bold, italic, underline, dim
+    - prefix (for quote block)
+- Using `confini` filetype as config file (using `libconfig` for processing)
+
+See example config `mdnrc` for more details.
 
 ## Sample
 
@@ -26,10 +36,10 @@ Make sure you have them installed before compiling.
 
 ### Debian
 
-```shell
-$ apt-get install libncursesw5-dev
-$ apt-get install libxml2-dev
-$ apt-get install libconfig-dev
+```sh
+apt-get install libncursesw5-dev
+apt-get install libxml2-dev
+apt-get install libconfig-dev
 ```
 
 ## Installation
@@ -37,31 +47,31 @@ $ apt-get install libconfig-dev
 Current version is still being developed for some HTML tags. However, it should work on most Markdown documents.
 
 ### Homebrew
-```shell
-$ brew install mandown
+```sh
+brew install mandown
 ```
 
 The installed binary `mdn` would be at `/usr/local/bin/`
 
 ### Local
-```shell
-$ git clone https://github.com/Titor8115/mandown.git
-$ cd mandown
-$ make install
+```sh
+git clone https://github.com/Titor8115/mandown.git
+cd mandown
+make install
 ```
 
 To remove the binary, you can run the commands below, or remove manually.
 
-```shell
-$ cd mandown
-$ make uninstall
+```sh
+cd mandown
+make uninstall
 ```
 
 If you just want to compile and test it.
 
-```shell
-$ cd mandown
-$ make
+```sh
+cd mandown
+make
 ```
 
 Feel free to create an issue.
@@ -70,8 +80,8 @@ Feel free to create an issue.
 
 Check out the new sample
 
-```shell
-$ mdn sample.md
+```sh
+mdn sample.md
 ```
 
 Mouse scrolling is supported! (if your terminal emulator allows)
@@ -112,12 +122,12 @@ render_file(fp, "md", "Test file", NULL);
 
 Static and shared libraries are available. Make sure you have installed the dependencies listed in **Library dependency** below, then assuming you installed Mandown under `/usr/local`:
 
-```shell
+```sh
 # static build
 gcc -o myprog -I/usr/local/include myprog.c /usr/local/lib/mandown.a -lncurses -lxml2 -lconfig
 ```
 
-```shell
+```sh
 # shared build
 gcc -o myprog -I/usr/local/include myprog.c -L/usr/local/lib -lmandown -lncurses -lxml2 -lconfig
 ```

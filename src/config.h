@@ -33,30 +33,55 @@ extern "C" {
 #define SCHEME_MDN  0
 #define SCHEME_LESS 1
 #define SCHEME_VIM  2
-#ifdef DEBUG
-struct color_pair_t {
-  short fg;
-  short bg;
+
+#define HEADING_LEVELS 6
+
+/* Color names accepted in mdnrc, the order must match the ncurses COLOR_*
+ * constants so that the index can be used directly as a color pair id */
+enum mdn_color {
+  MDN_COLOR_DEFAULT = 0,
+  MDN_COLOR_BLACK,
+  MDN_COLOR_RED,
+  MDN_COLOR_GREEN,
+  MDN_COLOR_YELLOW,
+  MDN_COLOR_BLUE,
+  MDN_COLOR_MAGENTA,
+  MDN_COLOR_CYAN,
+  MDN_COLOR_WHITE,
+
+  MDN_COLOR_MAX,
 };
 
-struct color_t {
-  struct color_pair_t text;
-  struct color_pair_t header;
-  struct color_pair_t link;
-  struct color_pair_t code;
+/* Style shared by every configurable element */
+struct mdn_style {
+  int  color;
+  int  background;
+  int  bold;
+  int  italic;
+  int  underline;
+  int  dim;
 };
-
-#endif
 
 struct mdn_cfg {
-#ifdef DEBUG
-  struct color_pair_t pager;
-  struct color_t      color;
-#endif
-
   char control_scheme[5];
   int  use_mouse;
   int  indent;
+
+  /* Heading style, indent is per level starting at h1 */
+  struct mdn_style heading;
+  int              heading_indent[HEADING_LEVELS];
+
+  /* Inline code and code block style, indent is extra indent of code blocks */
+  struct mdn_style code;
+  int              code_indent;
+
+  /* Hyperlink style */
+  struct mdn_style url;
+
+  /* Blockquote style, prefix is printed in front of quoted content */
+  struct mdn_style quote;
+  char             quote_prefix[8];
+  int              quote_indent;
 };
 
 void

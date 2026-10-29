@@ -39,27 +39,17 @@
 #define get_display_size(y, x) (y = getmaxy(stdscr) - 1, x = getmaxx(stdscr))
 #define update_size(f, d) ((f)->max_y = (d)->max_y, (f)->max_x = (d)->max_x)
 
-/* Available colors: BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE */
-static const struct {
-  short fg;
-  short bg;
-} color_pairs[] = {
-    [C_DEFAULT] = {           -1, -1},
-      [C_RED] = {    COLOR_RED, -1},
-    [C_GREEN] = {  COLOR_GREEN, -1},
-      [C_YELLOW] = { COLOR_YELLOW, -1},
-    [C_BLUE] = {   COLOR_BLUE, -1},
-      [C_MAGENTA] = {COLOR_MAGENTA, -1},
-    [C_CYAN] = {   COLOR_CYAN, -1},
+/* Color pair ids, one pair per configurable style */
+enum color_pair_id {
+  PAIR_HEADING = 1,
+  PAIR_CODE,
+  PAIR_URL,
+  PAIR_QUOTE,
+
+  PAIR_MAX,
 };
 
-/*static const struct {char name[19]; attr_t at;} frame_type[] =*/
-/*{*/
-/*  [FRAME_WIN]  = {"",                 A_NORMAL},*/
-/*  [FRAME_PAD]  = {" Markdown page ",  A_NORMAL},*/
-/*  [FRAME_SWIN] = {" Markdown page ", A_REVERSE},*/
-/*};*/
-
+/* Attributes of the elements that are not configurable */
 static const attr_t node_attr[] = {
     [N_EM]    = A_ITALIC,
     [N_PLAIN] = A_NORMAL,
@@ -67,20 +57,59 @@ static const attr_t node_attr[] = {
     [N_INS]   = A_UNDERLINE,
     [N_DEL]   = A_INVIS,
     [N_PRE]   = A_NORMAL,
-    [N_CODE]  = COLOR_PAIR(C_YELLOW),
+    [N_CODE]  = A_NORMAL,
     [N_KBD]   = A_DIM,
-    [N_HEAD]  = A_BOLD,
-    [N_HREF]  = A_UNDERLINE | COLOR_PAIR(C_BLUE),
+    [N_HEAD]  = A_NORMAL,
+    [N_HREF]  = A_NORMAL,
 };
 
-static void
-create_color_pairs()
+/* Translate a color name index from mdnrc to a ncurses color */
+static short
+color_to_curses(int color)
 {
+  switch (color) {
+    case MDN_COLOR_BLACK: return COLOR_BLACK;
+    case MDN_COLOR_RED: return COLOR_RED;
+    case MDN_COLOR_GREEN: return COLOR_GREEN;
+    case MDN_COLOR_YELLOW: return COLOR_YELLOW;
+    case MDN_COLOR_BLUE: return COLOR_BLUE;
+    case MDN_COLOR_MAGENTA: return COLOR_MAGENTA;
+    case MDN_COLOR_CYAN: return COLOR_CYAN;
+    case MDN_COLOR_WHITE: return COLOR_WHITE;
+    default: return -1; /* MDN_COLOR_DEFAULT, let the terminal decide */
+  }
+}
+
+/* Translate a style from mdnrc to ncurses attributes */
+static attr_t
+style_to_attr(const struct mdn_style *style, int pair)
+{
+  attr_t attr = COLOR_PAIR(pair);
+
+  if (style->bold) attr |= A_BOLD;
+  if (style->italic) attr |= A_ITALIC;
+  if (style->underline) attr |= A_UNDERLINE;
+  if (style->dim) attr |= A_DIM;
+
+  return attr;
+}
+
+static void
+create_color_pairs(const struct mdn_cfg *config)
+{
+  const struct mdn_style *styles[PAIR_MAX] = {
+      [PAIR_HEADING] = &config->heading,
+      [PAIR_CODE]    = &config->code,
+      [PAIR_URL]     = &config->url,
+      [PAIR_QUOTE]   = &config->quote,
+  };
+
   if (has_colors()) { /* Set color if terminal support */
     start_color();
     use_default_colors();
-    for (int i = C_DEFAULT; i < C_MAX; i++)
-      init_pair(i, color_pairs[i].fg, color_pairs[i].bg);
+    for (int i = PAIR_HEADING; i < PAIR_MAX; i++)
+      init_pair(i, color_to_curses(styles[i]->color),
+                color_to_curses(styles[i]->background));
   }
   else {
     sdwarn("Terminal doesn't seem to support colors");
@@ -263,7 +292,8 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
 }
 
 struct dom_link *
-content_setup(xmlNode *node, int indent, struct stack *href_table)
+content_setup(xmlNode *node, int indent, struct stack *href_table,
+              const struct mdn_cfg *config)
 {
   struct dom_href_stack *href;
   struct dom_link       *link;
@@ -271,6 +301,11 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
   struct dom_link       *tail = NULL;
   htmlNodePtr            cur_node;
   xmlChar               *xml_prop;
+  attr_t                 heading_attr = style_to_attr(&config->heading,
+                                                      PAIR_HEADING);
+  attr_t                 code_attr    = style_to_attr(&config->code, PAIR_CODE);
+  attr_t                 url_attr     = style_to_attr(&config->url, PAIR_URL);
+  attr_t quote_attr = style_to_attr(&config->quote, PAIR_QUOTE);
 
   for (cur_node = node; cur_node != NULL; cur_node = cur_node->next) {
     link         = dom_link_new(bufnew(OUTPUT_UNIT));
@@ -296,37 +331,37 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
       }
       else if (cmp_xml("h1", cur_node->name)) { /* h1 as "NAME" .SH */
         bufputs(link->buf, "NAME: ");
-        link->indent = 0;
+        link->indent = config->heading_indent[0];
         link->prop |= P_SECTION;
-        link->attr |= node_attr[N_HEAD];
+        link->attr |= heading_attr;
       }
       else if (cmp_xml("h2", cur_node->name)) { /* h2 for all other .SH */
-        link->indent = 0;
+        link->indent = config->heading_indent[1];
         link->prop |= P_SECTION;
-        link->attr |= node_attr[N_HEAD];
+        link->attr |= heading_attr;
       }
       else if (cmp_xml("h3", cur_node->name)) { /* h3 for .SS */
-        link->indent = 3;
+        link->indent = config->heading_indent[2];
         link->prop |= P_SECTION;
-        link->attr |= node_attr[N_HEAD];
+        link->attr |= heading_attr;
       }
       else if (cmp_xml("h4", cur_node->name)) { /* h4 as Sub of .SS */
         /*bufputs(link->buf, "SC: ");*/
-        link->indent = 4;
+        link->indent = config->heading_indent[3];
         link->prop |= P_SECTION;
-        link->attr |= node_attr[N_HEAD] | node_attr[N_EM];
+        link->attr |= heading_attr | node_attr[N_EM];
       }
       else if (cmp_xml("h5", cur_node->name)) { /* h5 as Points in Sub */
         /*bufputs(link->buf, "PT: ");*/
-        link->indent = 5;
+        link->indent = config->heading_indent[4];
         link->prop |= P_SECTION;
-        link->attr |= node_attr[N_HEAD] | node_attr[N_INS];
+        link->attr |= heading_attr | node_attr[N_INS];
       }
       else if (cmp_xml("h6", cur_node->name)) { /* h6 as Sub of Points */
         /*bufputs(link->buf, "PS: ");*/
-        link->indent = 6;
+        link->indent = config->heading_indent[5];
         link->prop |= P_SECTION;
-        link->attr |= node_attr[N_HEAD] | node_attr[N_INS] | node_attr[N_EM];
+        link->attr |= heading_attr | node_attr[N_INS] | node_attr[N_EM];
       }
       else if (cmp_xml("ul", cur_node->name) ||
                cmp_xml("ol", cur_node->name)) { /* unordered list */
@@ -365,24 +400,22 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
       /*  link->attr |= node_attr[N_KBD];*/
       /*}*/
       else if (cmp_xml("blockquote", cur_node->name)) { /* blockquote */
-#ifdef WIDE_NCURSES
-        bufputs(link->buf, "│ ");
-#else
-        bufputs(link->buf, "| ");
-#endif /* ifdef WIDE_NCURSES */
-        link->attr |= N_KBD;
+        bufputs(link->buf, config->quote_prefix);
+        bufputs(link->buf, " ");
+        link->indent += config->quote_indent;
+        link->attr |= quote_attr;
         link->prop |= P_SPLIT;
       }
       else if (cmp_xml("pre", cur_node->name)) { /* codeblock */
         link->prop |= P_PREFIXED;
         tail->prop |= P_PREFIXED;
-        link->indent += 2;
+        link->indent += config->code_indent;
       }
       else if (cmp_xml("code", cur_node->name)) { /* codeblock */
-        link->attr |= node_attr[N_CODE];
+        link->attr |= code_attr;
       }
       else if (cmp_xml("a", cur_node->name)) { /* hyperlink */
-        link->attr |= node_attr[N_HREF];
+        link->attr |= url_attr;
         link->prop |= P_HYPERLINK | P_PREFIXED;
         tail->prop |= P_HYPERLINK | P_PREFIXED;
         xml_prop = get_prop(cur_node, "href");
@@ -396,7 +429,7 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
         xmlFree(xml_prop);
       }
       else if (cmp_xml("img", cur_node->name)) { /* image */
-        link->attr |= node_attr[N_HREF];
+        link->attr |= url_attr;
         link->prop |= P_HYPERLINK | P_PREFIXED;
         tail->prop |= P_HYPERLINK | P_PREFIXED;
         xml_prop = get_prop(cur_node, "alt");
@@ -425,7 +458,8 @@ content_setup(xmlNode *node, int indent, struct stack *href_table)
     }
     else
       bufcstr(link->buf);
-    link->next = content_setup(cur_node->children, link->indent, href_table);
+    link->next = content_setup(cur_node->children, link->indent, href_table,
+                               config);
     dom_link_append(&head, link);
 
     if (tail) {
@@ -481,7 +515,7 @@ view(const struct buf *ob, int href_count)
   config = configure();
 
   dom_stack_new(&ref_stack, href_count);
-  content = content_setup(rootNode, config->indent, &ref_stack);
+  content = content_setup(rootNode, config->indent, &ref_stack, config);
 
   setlocale(LC_ALL, "");
   newterm(NULL, stdout, stderr);
@@ -492,7 +526,7 @@ view(const struct buf *ob, int href_count)
   if (config->use_mouse)
     mouse = mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, NULL);
 
-  create_color_pairs();
+  create_color_pairs(config);
 
   get_display_size(height, width);
 
