@@ -54,9 +54,17 @@ brew install mandown
 The installed binary `mdn` would be at `/usr/local/bin/`
 
 ### Debian
+
+#### Third Party Repo
+
+> Install at your own discretion.
+> See Debian project philosophy regarding [third-party repositories](https://wiki.debian.org/DontBreakDebian).
+
+##### pkg.haus
+
 Mandown is available from the [pkg.haus](https://pkg.haus) APT archive for Debian stable, testing and unstable on amd64 and arm64. Set up the archive per the instructions on [pkg.haus](https://pkg.haus), then run:
 
-```shell
+```sh
 $ sudo apt install mandown
 ```
 
