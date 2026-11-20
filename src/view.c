@@ -242,10 +242,14 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
 
     /* The cursor engine that decides drawing based on given property and
      * attribute */
-    position = 0;
-    // TODO: [missing whitespace] strtok probably caused the missing whitespace
-    // after Bold and Italic, need test and fix
     out = strtok(tmp, toc);
+    /* strtok skips leading delimiters, so keep the space after an inline
+     * element such as a link or emphasis here */
+    if (out != NULL && out != tmp && toc[0] == ' ' &&
+        cur_x > ob->indent && cur_x < dest->max_x) {
+      cur_x++;
+      waddch(dest->win, toc[0]);
+    }
     while (out != NULL) {
       len = strlen(out);
 
@@ -266,7 +270,7 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
       }
       // j += len;
       /* Decide whether applying word-wrap based on the strtok token */
-      position += len;
+      position = (out - tmp) + len;
       if (position < ob->buf->size) {
         if (toc[0] == '\n') {
           // cur_x = ob->indent;
@@ -277,8 +281,6 @@ render_page(struct frame *dest, struct dom_link *ib, struct stack *href_table)
           waddch(dest->win, toc[0]);
         }
       }
-
-      position++;
 
       out = strtok(NULL, toc);
     }
