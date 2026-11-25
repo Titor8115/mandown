@@ -35,5 +35,5 @@ This is *italic*
 
 This is **bold**
 
-Can you see this <del>strikethrough</del>?
+Can you see this ~~strikethrough~~?
 
