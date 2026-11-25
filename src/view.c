@@ -301,11 +301,10 @@ content_setup(xmlNode *node, int indent, struct stack *href_table,
   struct dom_link       *tail = NULL;
   htmlNodePtr            cur_node;
   xmlChar               *xml_prop;
-  attr_t                 heading_attr = style_to_attr(&config->heading,
-                                                      PAIR_HEADING);
-  attr_t                 code_attr    = style_to_attr(&config->code, PAIR_CODE);
-  attr_t                 url_attr     = style_to_attr(&config->url, PAIR_URL);
-  attr_t quote_attr = style_to_attr(&config->quote, PAIR_QUOTE);
+  attr_t heading_attr = style_to_attr(&config->heading, PAIR_HEADING);
+  attr_t code_attr    = style_to_attr(&config->code, PAIR_CODE);
+  attr_t url_attr     = style_to_attr(&config->url, PAIR_URL);
+  attr_t quote_attr   = style_to_attr(&config->quote, PAIR_QUOTE);
 
   for (cur_node = node; cur_node != NULL; cur_node = cur_node->next) {
     link         = dom_link_new(bufnew(OUTPUT_UNIT));

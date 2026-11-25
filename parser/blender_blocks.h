@@ -36,9 +36,8 @@ error "gperf generated tables don't work with this execution character set. Plea
 #ifndef GPERF_CASE_STRNCMP
 #define GPERF_CASE_STRNCMP 1
 static int
-    gperf_case_strncmp(s1, s2, n) register const char *s1;
-register const char *s2;
-register unsigned int n;
+    gperf_case_strncmp(register const char *s1, register const char *s2,
+		       register unsigned int n)
 {
   for (; n > 0;) {
     unsigned char c1 = gperf_downcase[(unsigned char)*s1++];
@@ -60,9 +59,7 @@ __inline
 inline
 #endif
 #endif
-    static unsigned int
-        hash_block_tag(str, len) register const char *str;
-register unsigned int len;
+static unsigned int hash_block_tag(register const char* str, register unsigned int len)
 {
   static const unsigned char asso_values[] =
       {
@@ -111,9 +108,7 @@ __inline
     __attribute__((__gnu_inline__))
 #endif
 #endif
-    const char *
-        find_block_tag(str, len) register const char *str;
-register unsigned int len;
+const char * find_block_tag(register const char *str, register unsigned int len)
 {
   enum {
     TOTAL_KEYWORDS = 24,

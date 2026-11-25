@@ -88,7 +88,7 @@ else ifeq ($(UNAME_S),Darwin)
 	SOEXT      = dylib
 	SHLFLAGS   = -dynamiclib
 else
-CURSES_PKG   = ncurses
+	CURSES_PKG   = ncurses
 endif
 
 # libraries
@@ -119,7 +119,7 @@ all: $(TARGET)
 debug: DEFINES += -DDEBUG
 debug: $(TARGET)
 # executables
-$(TARGET): $(CLI_OBJECTS) $(LIB_A)
+$(TARGET): $(CLI_OBJECTS) $(LIB_OBJECTS)
 	@$(MKDIR_P) $(CONFIGDIR)
 	@echo
 	@echo "Formula:    " $@
@@ -131,13 +131,14 @@ $(TARGET)_shlib: $(CLI_OBJECTS) $(LIB_SO)
 
 # libs
 $(LIB_A): $(LIB_OBJECTS)
-	ar r $@ $^
+	@ar r $@ $^
 
 $(LIB_SO): $(LIB_OBJECTS)
 ifeq ($(SOEXT), "")
 	$(error "Unable to build shared lib on $(UNAME_S))
 else
-	$(CC) $(SHLFLAGS) -o $@ $^ $(LIBS)
+	@echo "Creating: " $(LIB_SO)
+	@$(CC) $(SHLFLAGS) -o $@ $^ $(LIBS)
 endif
 
 # perfect hashing
@@ -170,7 +171,7 @@ uninstall:
 -include $(wildcard $($O)/*.d)
 
 # generic object compilations
-$O/%.o:	%.c
+$O/%.o: %.c
 	@$(MKDIR_P) $(@D)
 	@echo "Compiling:" $<
 	@$(CC) -o $@ $(CFLAGS) -c $<
