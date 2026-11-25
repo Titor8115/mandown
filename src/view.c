@@ -495,6 +495,7 @@ view(const struct buf *ob, int href_count)
   int                    width;
   int                    cur_y;
   int                    cur_x;
+  int                    rows;
 
   LIBXML_TEST_VERSION;
   /* Grow DOM tree; */
@@ -531,7 +532,11 @@ view(const struct buf *ob, int href_count)
 
   get_display_size(height, width);
 
-  page   = frame_new(FRAME_PAD, NULL, (int)ob->size / width, width, 0, 0);
+  /* newpad() fails for zero rows, which is what a short document gets on a
+   * terminal wider than the document is long */
+  rows = (int)ob->size / width;
+  if (rows < 1) rows = 1;
+  page   = frame_new(FRAME_PAD, NULL, rows, width, 0, 0);
   status = frame_new(FRAME_WIN, NULL, 1, width, height, 0);
   probe  = frame_new(FRAME_WIN, NULL, 4, width, height - 4, 0);
   wattrset(status->win, A_REVERSE);
